@@ -1,0 +1,25 @@
+{
+    "version": 1.1,
+    "atDirectives": [
+        {
+            "name": "@custom-variant",
+            "description": "Tailwind CSS v4: 自定义变体规则，用于定义 dark mode 等变体的匹配条件。"
+        },
+        {
+            "name": "@theme",
+            "description": "Tailwind CSS v4: 定义主题变量（颜色、间距、动画等），支持 inline 修饰符。"
+        },
+        {
+            "name": "@source",
+            "description": "Tailwind CSS v4: 指定额外的源文件扫描路径。"
+        },
+        {
+            "name": "@utility",
+            "description": "Tailwind CSS v4: 定义自定义工具类。"
+        },
+        {
+            "name": "@variant",
+            "description": "Tailwind CSS v4: 定义自定义变体。"
+        }
+    ]
+}

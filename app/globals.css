@@ -1,0 +1,505 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* 跑马灯滚动动画 */
+@keyframes ticker {
+  0% {
+    transform: translateX(0);
+  }
+
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+:root {
+  --radius: 0.625rem;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.714);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.145 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.145 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.985 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 12%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.985 0 0);
+  --sidebar-primary-foreground: oklch(0.205 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 12%);
+  --sidebar-ring: oklch(0.556 0 0);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+
+  button:not([disabled]),
+  [role="button"]:not([disabled]) {
+    cursor: pointer;
+  }
+}
+
+@keyframes float {
+
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+@keyframes float-delayed {
+
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(-15px);
+  }
+}
+
+@keyframes pulse-glow {
+
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+
+  50% {
+    opacity: 0.8;
+  }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-float-delayed {
+  animation: float-delayed 8s ease-in-out infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 4s ease-in-out infinite;
+}
+
+/* ===== Hero 按钮光效边框 ===== */
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* ===== APP 截图无限滚动动画 ===== */
+@keyframes scroll-smooth {
+  0% {
+    transform: translateX(0);
+  }
+
+  100% {
+    /*
+     * 滚动距离 = (卡片宽度 + 间距) × 卡片数量
+     * 5 张原始截图 + 5 张副本 = 10 张，实际需要滚动 5 张原始的距离完成一个循环
+     */
+    transform: translateX(calc(-1 * (270px + 1.5rem) * 5));
+  }
+}
+
+.animate-scroll-smooth {
+  animation: scroll-smooth 20s linear infinite;
+}
+
+/* 隐藏滚动条但保留滚动功能 */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* 移动端稍慢动画 */
+@media (max-width: 768px) {
+  .animate-scroll-smooth {
+    animation-duration: 25s;
+  }
+}
+
+/* 尊重用户偏好：减少动画时禁用滚动 */
+@media (prefers-reduced-motion: reduce) {
+  .animate-scroll-smooth {
+    animation: none;
+  }
+
+  .animate-ranking-scroll {
+    animation: none;
+  }
+}
+
+/* ===== 热销榜单垂直滚动动画 ===== */
+@keyframes ranking-scroll {
+  0% {
+    transform: translateY(0);
+  }
+
+  100% {
+    /* 内容副本各占 50%，滚动到 -50% 实现无缝循环 */
+    transform: translateY(-50%);
+  }
+}
+
+.animate-ranking-scroll {
+  animation: ranking-scroll 35s linear infinite;
+}
+
+/* 移动端热销榜单滚动降速，降低视觉干扰 */
+@media (max-width: 768px) {
+  .animate-ranking-scroll {
+    animation-duration: 45s;
+  }
+}
+
+/* ===== 卡券齿孔：模拟票券左右边缘半圆切口 ===== */
+.coupon-notch-left,
+.coupon-notch-right {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #f5f7fa;
+  flex-shrink: 0;
+  position: relative;
+  margin-top: -7px;
+}
+
+.coupon-notch-left {
+  margin-left: -7px;
+  box-shadow: inset -1px 0 0 0 rgb(0 0 0 / 4%);
+}
+
+.coupon-notch-right {
+  margin-right: -7px;
+  box-shadow: inset 1px 0 0 0 rgb(0 0 0 / 4%);
+}
+
+/* ===== Markdown 文章正文样式（参考 Astro 博客详情页） ===== */
+.markdown-body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+  line-height: 1.8;
+  word-wrap: break-word;
+  font-size: 17px;
+  color: #374151;
+}
+
+.dark .markdown-body {
+  color: #d1d5db;
+}
+
+/* 二级标题 */
+.markdown-body h2 {
+  font-size: 1.75em;
+  font-weight: 700;
+  margin-top: 2em;
+  margin-bottom: 1em;
+  padding-bottom: 0.5em;
+  border-bottom: 2px solid #f3f4f6;
+  color: #111827;
+}
+
+.dark .markdown-body h2 {
+  border-bottom-color: #374151;
+  color: #f9fafb;
+}
+
+/* 三级标题 */
+.markdown-body h3 {
+  font-size: 1.4em;
+  font-weight: 600;
+  margin-top: 1.6em;
+  margin-bottom: 0.8em;
+  color: #1f2937;
+}
+
+.dark .markdown-body h3 {
+  color: #f3f4f6;
+}
+
+/* 四级标题 */
+.markdown-body h4 {
+  font-size: 1.2em;
+  font-weight: 600;
+  margin-top: 1.4em;
+  margin-bottom: 0.6em;
+  color: #1f2937;
+}
+
+.dark .markdown-body h4 {
+  color: #e5e7eb;
+}
+
+/* 段落 */
+.markdown-body p {
+  margin-bottom: 1.5em;
+  text-align: justify;
+}
+
+/* 粗体 */
+.markdown-body strong {
+  font-weight: 700;
+  color: #111827;
+}
+
+.dark .markdown-body strong {
+  color: #fff;
+}
+
+/* 无序列表 */
+.markdown-body ul,
+.markdown-body ol {
+  margin-bottom: 1.5em;
+  padding-left: 1.5em;
+}
+
+.markdown-body ul {
+  list-style-type: disc;
+}
+
+.markdown-body ol {
+  list-style-type: decimal;
+}
+
+.markdown-body li {
+  margin-bottom: 0.5em;
+}
+
+/* 引用块 */
+.markdown-body blockquote {
+  padding: 1em 1.5em;
+  color: #4b5563;
+  border-left: 0.25em solid #3b82f6;
+  background: #f9fafb;
+  border-radius: 0 0.5em 0.5em 0;
+  margin: 1.5em 0;
+}
+
+.dark .markdown-body blockquote {
+  background: #1f2937;
+  color: #9ca3af;
+}
+
+.markdown-body blockquote p:last-child {
+  margin-bottom: 0;
+}
+
+/* 行内代码 */
+.markdown-body code:not(pre code) {
+  padding: 0.2em 0.4em;
+  margin: 0;
+  font-size: 85%;
+  background-color: rgba(59, 130, 246, 0.1);
+  border-radius: 6px;
+  color: #2563eb;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+.dark .markdown-body code:not(pre code) {
+  background-color: rgba(59, 130, 246, 0.2);
+  color: #60a5fa;
+}
+
+/* 代码块 */
+.markdown-body pre {
+  padding: 1.5em;
+  overflow: auto;
+  font-size: 85%;
+  line-height: 1.45;
+  background-color: #1e293b;
+  border-radius: 12px;
+  margin-bottom: 1.5em;
+  border: 1px solid #334155;
+}
+
+.markdown-body pre code {
+  background: transparent;
+  color: #e2e8f0;
+  padding: 0;
+  font-size: 14px;
+}
+
+/* 图片 */
+.markdown-body img {
+  max-width: 100%;
+  border-radius: 12px;
+  margin: 2em auto;
+  display: block;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+/* 表格 */
+.markdown-body table {
+  width: 100%;
+  margin-bottom: 1.5em;
+  border-collapse: collapse;
+}
+
+.markdown-body th,
+.markdown-body td {
+  padding: 0.75em 1em;
+  border: 1px solid #e5e7eb;
+  text-align: left;
+}
+
+.dark .markdown-body th,
+.dark .markdown-body td {
+  border-color: #374151;
+}
+
+.markdown-body th {
+  background-color: #f8fafc;
+  font-weight: 600;
+}
+
+.dark .markdown-body th {
+  background-color: #111827;
+}
+
+/* 链接 */
+.markdown-body a {
+  color: #2563eb;
+  text-decoration: none;
+}
+
+.markdown-body a:hover {
+  text-decoration: underline;
+}
+
+/* 分隔线 */
+.markdown-body hr {
+  margin: 2em 0;
+  border: none;
+  border-top: 1px solid #e5e7eb;
+}
+
+.dark .markdown-body hr {
+  border-top-color: #374151;
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+  .markdown-body {
+    font-size: 16px;
+  }
+
+  .markdown-body h2 {
+    font-size: 1.5em;
+  }
+}
