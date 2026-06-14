@@ -1,0 +1,1709 @@
+---
+/**
+ * 全局搜索页 — 聚合多平台号卡商品
+ *
+ * 并行拉取 5 大平台（172号卡/浩卡联盟/林夕通信/翼卡云/卡业联盟）商品数据，
+ * 统一映射为 SearchProduct 格式。客户端支持：
+ * - 关键词搜索（大小写不敏感，空格分词 AND 匹配）
+ * - 运营商分类 Tab（全部/推荐/移动/电信/联通/广电）
+ * - 快捷标签筛选（长期卡/低月租/大流量/带通话）
+ * - 点击加载更多分页
+ *
+ * 路由：/search
+ * 数据来源：复用各平台 lib/api 模块的 fetchXxx() 函数
+ */
+import Layout from '../layouts/Layout.astro';
+import SEOSchema from '../components/SEOSchema.astro';
+
+/* ========== 平台 API 导入 ========== */
+import { fetchProducts, getOrderPageUrl } from '../lib/haoka-api';
+import { fetchAllHaokaVipProducts, getHaokaVipProductLink } from '../lib/haokavip-api';
+import { fetchLinxiProducts, getLinxiOrderUrl } from '../lib/linxi-api';
+import { fetchYkyProducts, getYkyOrderUrl } from '../lib/yky-api';
+import {
+  fetchAllGthProducts,
+  getGthProductLink,
+  isGthSimCard,
+  parseGthPrice,
+  parseGthFlow,
+  parseGthVoice,
+  detectGthOperator,
+} from '../lib/gantanhao-api';
+
+import type { HaokaProduct } from '../lib/haoka-api';
+import type { HaokaVipProduct } from '../lib/haokavip-api';
+import type { LinxiProduct } from '../lib/linxi-api';
+import type { YkyProductWithMeta } from '../lib/yky-api';
+import type { GthProduct } from '../lib/gantanhao-api';
+
+/* ========== 统一搜索商品类型 ========== */
+
+/** 运营商枚举 */
+type SearchOperator = 'mobile' | 'telecom' | 'unicom' | 'broadcast' | 'unknown';
+
+/** 平台标识 */
+type SearchPlatform = '172haoka' | 'haokavip' | 'linxi' | 'yky' | 'gth';
+
+/** 统一搜索商品模型 */
+interface SearchProduct {
+  id: string;
+  name: string;
+  /** 详情页路由 */
+  detailUrl: string;
+  /** 办理链接（外链） */
+  orderUrl: string;
+  /** 平台标识 */
+  platform: SearchPlatform;
+  /** 运营商 */
+  operator: SearchOperator;
+  /** 月租（元），0 表示面议 */
+  price: number;
+  /** 通用流量（GB） */
+  flow: number;
+  /** 通话时长（分钟） */
+  voice: number;
+  /** 套餐时长 */
+  duration: string;
+  /** 归属地/地区 */
+  region: string;
+  /** 是否推荐 */
+  isRecommend: boolean;
+  /** 运营商中文标签 */
+  operatorLabel: string;
+  /** 平台中文标签 */
+  platformLabel: string;
+}
+
+/* ========== 工具函数 ========== */
+
+/** 从文本中提取月租价格 */
+function parsePrice(text: string): number {
+  const m = text.match(/(\d+\.?\d*)元/);
+  return m ? parseFloat(m[1]) : 0;
+}
+
+/** 从文本中提取流量 GB */
+function parseFlow(text: string): number {
+  const m = text.match(/(\d+\.?\d*)\s*(?:GB|G)/i);
+  return m ? parseFloat(m[1]) : 0;
+}
+
+/** 从文本中提取通话分钟 */
+function parseVoice(text: string): number {
+  const m = text.match(/(\d+)\s*分钟/);
+  return m ? parseInt(m[1]) : 0;
+}
+
+/** 从商品名称识别运营商 */
+function detectOperator(name: string): SearchOperator {
+  const n = name.toLowerCase();
+  if (n.includes('移动')) return 'mobile';
+  if (n.includes('电信')) return 'telecom';
+  if (n.includes('联通')) return 'unicom';
+  if (n.includes('广电')) return 'broadcast';
+  return 'unknown';
+}
+
+/** 运营商中文标签 */
+const OPERATOR_LABEL: Record<string, string> = {
+  mobile: '移动',
+  telecom: '电信',
+  unicom: '联通',
+  broadcast: '广电',
+  unknown: '其他',
+};
+
+/** 平台中文标签 */
+const PLATFORM_LABEL: Record<SearchPlatform, string> = {
+  '172haoka': '172',
+  haokavip: '浩卡',
+  linxi: '林夕',
+  yky: '翼卡云',
+  gth: '卡业联盟',
+};
+
+/* ========== 数据获取 ========== */
+
+/** 并行拉取所有平台数据 */
+const [haokaRes, haokavipRes, linxiRes, ykyRes, gthRes] = await Promise.allSettled([
+  fetchProducts(),
+  fetchAllHaokaVipProducts(),
+  fetchLinxiProducts(),
+  fetchYkyProducts(),
+  fetchAllGthProducts(),
+]);
+
+const allProducts: SearchProduct[] = [];
+const platformErrors: string[] = [];
+
+/* ===== 172号卡 ===== */
+if (haokaRes.status === 'fulfilled') {
+  allProducts.push(
+    ...haokaRes.value.map((p: HaokaProduct) => ({
+      id: `172-${p.productID}`,
+      name: p.productName,
+      detailUrl: `/Product/${p.productID}`,
+      orderUrl: getOrderPageUrl(p.productID),
+      platform: '172haoka' as SearchPlatform,
+      operator: detectOperator(p.productName),
+      price: parsePrice(p.productName + p.taocan),
+      flow: parseFlow(p.taocan),
+      voice: parseVoice(p.taocan),
+      duration: p.priceTime || '未知',
+      region: p.area || '',
+      isRecommend: p.flag || false,
+      operatorLabel: OPERATOR_LABEL[detectOperator(p.productName)] || '其他',
+      platformLabel: '172',
+    }))
+  );
+} else {
+  platformErrors.push('172号卡');
+}
+
+/* ===== 浩卡联盟 ===== */
+if (haokavipRes.status === 'fulfilled') {
+  allProducts.push(
+    ...haokavipRes.value.map((p: HaokaVipProduct) => ({
+      id: `hkvip-${p.product_id}`,
+      name: p.product_name,
+      detailUrl: `/haoka/${p.product_id}`,
+      orderUrl: getHaokaVipProductLink(p.product_link || ''),
+      platform: 'haokavip' as SearchPlatform,
+      operator: detectOperator(p.product_name),
+      price: parsePrice(p.product_name),
+      flow: parseFlow(p.product_name),
+      voice: parseVoice(p.product_name),
+      duration: '未知',
+      region: '',
+      isRecommend: p.is_recommend === 1,
+      operatorLabel: OPERATOR_LABEL[detectOperator(p.product_name)] || '其他',
+      platformLabel: '浩卡',
+    }))
+  );
+} else {
+  platformErrors.push('浩卡联盟');
+}
+
+/* ===== 林夕通信 ===== */
+if (linxiRes.status === 'fulfilled') {
+  allProducts.push(
+    ...linxiRes.value.map((p: LinxiProduct) => ({
+      id: `linxi-${p.id}`,
+      name: p.shop_name,
+      detailUrl: `/shop/${p.id}`,
+      orderUrl: getLinxiOrderUrl(p.id),
+      platform: 'linxi' as SearchPlatform,
+      operator: detectOperator(p.shop_name),
+      price: parsePrice(p.shop_name),
+      flow: parseFlow(p.shop_name),
+      voice: parseVoice(p.shop_name),
+      duration: '未知',
+      region: p.gsd_province || '',
+      isRecommend: false,
+      operatorLabel: OPERATOR_LABEL[detectOperator(p.shop_name)] || '其他',
+      platformLabel: '林夕',
+    }))
+  );
+} else {
+  platformErrors.push('林夕通信');
+}
+
+/* ===== 翼卡云 ===== */
+if (ykyRes.status === 'fulfilled' && ykyRes.value.products) {
+  allProducts.push(
+    ...ykyRes.value.products.map((p: YkyProductWithMeta) => ({
+      id: `yky-${p.id}`,
+      name: p.name,
+      detailUrl: `/yky/${p.id}`,
+      orderUrl: p._orderUrl || getYkyOrderUrl(p.id),
+      platform: 'yky' as SearchPlatform,
+      operator: p._operator as SearchOperator,
+      price: p.favourMonthFee || p.monthFee || 0,
+      flow: p.commonFlow || 0,
+      voice: p.callDuration || 0,
+      duration: p._duration || '未知',
+      region: p._region || '',
+      isRecommend: false,
+      operatorLabel: OPERATOR_LABEL[p._operator] || '其他',
+      platformLabel: '翼卡云',
+    }))
+  );
+} else {
+  platformErrors.push('翼卡云');
+}
+
+/* ===== 卡业联盟 ===== */
+if (gthRes.status === 'fulfilled') {
+  const gthProducts = gthRes.value.filter(isGthSimCard);
+  allProducts.push(
+    ...gthProducts.map((p: GthProduct) => ({
+      id: `gth-${p.codeNumber}`,
+      name: p.name,
+      detailUrl: `/gth/${p.codeNumber}`,
+      orderUrl: getGthProductLink(p.codeNumber),
+      platform: 'gth' as SearchPlatform,
+      operator: detectGthOperator(p.type) as SearchOperator,
+      price: parseGthPrice(p.name),
+      flow: parseGthFlow(p.subName),
+      voice: parseGthVoice(p.subName),
+      duration: p.packageContract || '未知',
+      region: p.location || '',
+      isRecommend: false,
+      operatorLabel:
+        detectGthOperator(p.type) === 'mobile'
+          ? '移动'
+          : detectGthOperator(p.type) === 'telecom'
+            ? '电信'
+            : detectGthOperator(p.type) === 'unicom'
+              ? '联通'
+              : detectGthOperator(p.type) === 'broadcast'
+                ? '广电'
+                : '其他',
+      platformLabel: '卡业联盟',
+    }))
+  );
+} else {
+  platformErrors.push('卡业联盟');
+}
+
+/** 按推荐优先 + 排序 */
+allProducts.sort((a, b) => {
+  if (a.isRecommend !== b.isRecommend) return b.isRecommend ? 1 : -1;
+  return a.price - b.price;
+});
+
+const totalCount = allProducts.length;
+
+/** 客户端用轻量商品数据（字段缩写减少传输） */
+const clientProducts = allProducts.map((p) => ({
+  i: p.id,
+  n: p.name,
+  d: p.detailUrl,
+  o: p.orderUrl,
+  pf: p.platform,
+  op: p.operator,
+  pr: p.price,
+  fl: p.flow,
+  vo: p.voice,
+  du: p.duration,
+  re: p.region,
+  rc: p.isRecommend,
+  ol: p.operatorLabel,
+  pl: p.platformLabel,
+}));
+
+/** 客户端用平台错误列表 */
+const clientErrors = platformErrors;
+---
+
+<Layout
+  title="流量卡推荐 | 19元29元大流量卡推荐 — 手机流量卡在线办理"
+  description="2026年最新流量卡对比搜索，聚合各大平台号卡榜单。19元200G、29元大流量卡、39元长期套餐一键筛选。电信/移动/联通/广电5G流量卡哪个好？正规渠道免费申请，不限速全国通用。"
+  keywords="流量卡,手机流量卡,大流量卡,5G流量卡,纯流量卡,电话卡,手机卡,上网卡,9元流量卡,19元流量卡,29元流量卡,39元流量卡,19元200G流量卡,29元150G流量卡,低月租手机卡,便宜手机卡,电信流量卡,移动流量卡,联通流量卡,广电流量卡,电信星卡,移动花卡,广电福兔卡,学生流量卡,大学生手机卡,上班族流量卡,长期套餐流量卡,不限速流量卡,双卡双待流量卡,流量卡哪个好,流量卡怎么选,流量卡搜索,流量卡对比,流量卡推荐,流量卡避坑指南,正规流量卡,流量卡免费申请,流量卡在线办理,网上办手机卡,号卡榜单,流量卡排行榜,热销流量卡,大流量卡推荐"
+  image="/assets/logo/logo.png"
+>
+  <!-- JSON-LD 结构化数据：CollectionPage + SearchAction Schema（SEO 增强） -->
+  <script
+    type="application/ld+json"
+    set:html={JSON.stringify({
+      '@context': 'https://schema.org',
+      '@type': 'CollectionPage',
+      name: '流量卡推荐 — 手机流量卡在线办理	',
+      description: '聚合各大平台号卡榜单，支持按运营商、价格、流量、时长多维筛选对比',
+      url: 'https://urlka.cn/search',
+      isPartOf: { '@type': 'WebSite', name: '172号卡', url: 'https://urlka.cn' },
+      potentialAction: {
+        '@type': 'SearchAction',
+        target: 'https://urlka.cn/search?q={search_term_string}',
+        'query-input': 'required name=search_term_string',
+      },
+      about: [
+        { '@type': 'Thing', name: '流量卡' },
+        { '@type': 'Thing', name: '手机流量卡' },
+        { '@type': 'Thing', name: '大流量卡' },
+        { '@type': 'Thing', name: '5G流量卡' },
+      ],
+    })}
+  />
+
+  <SEOSchema
+    type="website"
+    title="流量卡推荐 | 19元29元大流量卡推荐 — 手机流量卡在线办理"
+    description="2026年最新流量卡对比搜索，聚合各大平台号卡榜单。19元200G、29元大流量卡、39元长期套餐一键筛选。电信/移动/联通/广电5G流量卡哪个好？正规渠道免费申请，不限速全国通用。"
+    url="https://urlka.cn/search"
+    image="/assets/logo/logo.png"
+    organizationName="172号卡"
+  />
+
+  <!-- ===== Hero Banner ===== -->
+  <section
+    class="relative overflow-hidden bg-gray-50 pb-16 pt-[100px] dark:bg-gray-900 md:pb-20 md:pt-[120px]"
+  >
+    <!-- 背景装饰光晕 -->
+    <div class="absolute inset-0 overflow-hidden">
+      <div class="absolute left-1/4 top-0 h-96 w-96 rounded-full bg-primary/10 blur-3xl"></div>
+      <div class="absolute bottom-0 right-1/4 h-80 w-80 rounded-full bg-blue-400/10 blur-3xl"></div>
+    </div>
+
+    <div class="container relative z-10 mx-auto px-4">
+      <div class="mx-auto max-w-3xl text-center">
+        <!-- 标签 -->
+        <span
+          class="mb-4 inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-1.5 text-sm font-semibold text-primary backdrop-blur-sm"
+        >
+          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+            ><path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg
+          >
+          五大平台 · 实时聚合
+        </span>
+        <!-- 主标题 -->
+        <h1
+          class="mb-4 text-3xl font-black leading-tight text-gray-900 dark:text-white sm:text-4xl md:text-5xl"
+        >
+          号卡精选榜单
+        </h1>
+        <!-- 副标题 -->
+        <p class="mb-8 text-base text-gray-600 dark:text-gray-300 sm:text-lg md:text-xl">
+          聚合 {totalCount} 款官方授权号卡套餐，全网比价，一目了然
+        </p>
+
+        <!-- 搜索框 -->
+        <div class="relative mx-auto w-full max-w-xl">
+          <input
+            id="search-input"
+            type="text"
+            placeholder="搜索套餐名称，如：电信星卡、联通王卡..."
+            class="w-full rounded-xl border border-gray-200 bg-white py-4 pl-12 pr-12 text-sm text-gray-900 shadow-sm outline-none transition-all duration-200 focus:border-primary focus:shadow-md focus:ring-2 focus:ring-primary/10 dark:border-dark-3 dark:bg-dark-2 dark:text-white dark:placeholder:text-gray-500 dark:focus:border-primary"
+          />
+          <svg
+            class="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-gray-500"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <button
+            id="search-clear"
+            class="absolute right-4 top-1/2 hidden h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full bg-gray-100 text-gray-400 transition-colors hover:bg-gray-200 hover:text-gray-600 dark:bg-dark-3 dark:text-gray-500"
+            type="button"
+          >
+            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+              ><path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"></path></svg
+            >
+          </button>
+        </div>
+
+        <!-- 快捷统计 -->
+        <div
+          class="mt-6 flex items-center justify-center gap-6 text-sm text-gray-500 dark:text-gray-400"
+        >
+          <span><strong class="text-base font-bold text-primary">{totalCount}</strong> 款套餐</span>
+          <span class="h-3 w-px bg-gray-200 dark:bg-gray-700"></span>
+          <span><strong class="text-base font-bold text-primary">4</strong> 大运营商</span>
+          <span class="h-3 w-px bg-gray-200 dark:bg-gray-700"></span>
+          <span><strong class="text-base font-bold text-primary">19元</strong> 起</span>
+        </div>
+      </div>
+
+      {
+        platformErrors.length > 0 && (
+          <p class="mt-6 text-center text-xs text-gray-400 dark:text-gray-500">
+            部分平台加载失败：{platformErrors.join('、')}，数据可能不完整
+          </p>
+        )
+      }
+    </div>
+
+    <!-- 底部波浪分隔 -->
+    <div class="absolute bottom-0 left-0 right-0">
+      <svg viewBox="0 0 1440 60" fill="none" xmlns="http://www.w3.org/2000/svg" class="w-full">
+        <path
+          d="M0 60V20C240 0 480 40 720 30C960 20 1200 0 1440 20V60H0Z"
+          fill="white"
+          class="dark:fill-dark"></path>
+      </svg>
+    </div>
+  </section>
+
+  <!-- ===== 主体内容区 ===== -->
+  <section class="relative bg-gray-50/50 pb-24 pt-14 dark:bg-dark lg:pb-36 lg:pt-20">
+    <div
+      class="absolute inset-0 -z-10 bg-gradient-to-b from-primary/[0.02] via-transparent to-transparent"
+    >
+    </div>
+    <!-- 背景装饰图 -->
+    <div
+      class="pointer-events-none absolute inset-0 -z-10 bg-cover bg-center bg-no-repeat"
+      style="background-image: url('/assets/background/background-1.png')"
+    >
+    </div>
+
+    <div class="container mx-auto px-4">
+      <div class="flex flex-col gap-8 lg:flex-row">
+        <!-- ===== 左侧：榜单分类导航 ===== -->
+        <aside class="hidden shrink-0 lg:block lg:w-60">
+          <div class="sticky top-28 space-y-6">
+            <!-- 榜单类型 -->
+            <div
+              class="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm dark:border-dark-3 dark:bg-dark-2"
+            >
+              <h3
+                class="mb-3 flex items-center gap-2 text-sm font-bold text-gray-800 dark:text-gray-200"
+              >
+                <svg class="h-4 w-4 text-amber-500" viewBox="0 0 24 24" fill="currentColor"
+                  ><path
+                    d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 22 12 18.56 5.82 22 7 14.14l-5-4.87 6.91-1.01L12 2z"
+                  ></path></svg
+                >
+                榜单类型
+              </h3>
+              <nav class="space-y-1">
+                <button
+                  type="button"
+                  data-tab="recommend"
+                  class="search-tab flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-gray-600 transition-all hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-dark-3"
+                >
+                  <span
+                    class="inline-flex h-6 w-6 items-center justify-center rounded-lg bg-red-50 text-[10px] font-bold text-red-500 dark:bg-red-900/20"
+                    >HOT</span
+                  >
+                  热销榜单
+                </button>
+                <button
+                  type="button"
+                  data-tab="all"
+                  class="search-tab active flex w-full items-center gap-2.5 rounded-xl bg-primary/5 px-3 py-2.5 text-left text-sm font-medium text-primary transition-all dark:bg-primary/10"
+                >
+                  <span
+                    class="inline-flex h-6 w-6 items-center justify-center rounded-lg bg-blue-50 text-[10px] font-bold text-blue-500 dark:bg-blue-900/20"
+                    >NEW</span
+                  >
+                  今日榜单
+                </button>
+              </nav>
+            </div>
+            <!-- 运营商分类 -->
+            <div
+              class="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm dark:border-dark-3 dark:bg-dark-2"
+            >
+              <h3
+                class="mb-3 flex items-center gap-2 text-sm font-bold text-gray-800 dark:text-gray-200"
+              >
+                <svg
+                  class="h-4 w-4 text-primary"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  ><circle cx="12" cy="12" r="3"></circle><path
+                    d="M12 2v4m0 12v4m-6.93-3.07l2.83-2.83m8.2-8.2l2.83-2.83M2 12h4m12 0h4m-15.07 6.93l2.83-2.83m8.2-8.2l2.83-2.83"
+                  ></path></svg
+                >
+                运营商
+              </h3>
+              <nav class="space-y-1">
+                <button
+                  type="button"
+                  data-tab="mobile"
+                  class="search-tab flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm text-gray-600 transition-all hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-dark-3"
+                >
+                  <span
+                    class="h-3 w-3 rounded-full bg-green-500 ring-2 ring-green-200 dark:ring-green-900/40"
+                  ></span>
+                  中国移动
+                </button>
+                <button
+                  type="button"
+                  data-tab="telecom"
+                  class="search-tab flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm text-gray-600 transition-all hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-dark-3"
+                >
+                  <span
+                    class="h-3 w-3 rounded-full bg-blue-500 ring-2 ring-blue-200 dark:ring-blue-900/40"
+                  ></span>
+                  中国电信
+                </button>
+                <button
+                  type="button"
+                  data-tab="unicom"
+                  class="search-tab flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm text-gray-600 transition-all hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-dark-3"
+                >
+                  <span
+                    class="h-3 w-3 rounded-full bg-orange-500 ring-2 ring-orange-200 dark:ring-orange-900/40"
+                  ></span>
+                  中国联通
+                </button>
+                <button
+                  type="button"
+                  data-tab="broadcast"
+                  class="search-tab flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm text-gray-600 transition-all hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-dark-3"
+                >
+                  <span
+                    class="h-3 w-3 rounded-full bg-purple-500 ring-2 ring-purple-200 dark:ring-purple-900/40"
+                  ></span>
+                  中国广电
+                </button>
+              </nav>
+            </div>
+            <!-- 特色榜单 -->
+            <div
+              class="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm dark:border-dark-3 dark:bg-dark-2"
+            >
+              <h3
+                class="mb-3 flex items-center gap-2 text-sm font-bold text-gray-800 dark:text-gray-200"
+              >
+                <svg
+                  class="h-4 w-4 text-primary"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"><path d="M6 9l6 6 6-6"></path></svg
+                >
+                特色榜单
+              </h3>
+              <nav class="space-y-1">
+                <button
+                  type="button"
+                  data-tag="big_flow"
+                  class="quick-tag flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm text-gray-600 transition-all hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-dark-3"
+                >
+                  <svg
+                    class="h-4 w-4 text-blue-500"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    ><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg
+                  >
+                  大流量卡榜单
+                </button>
+                <button
+                  type="button"
+                  data-tag="flow_100"
+                  class="quick-tag flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm text-gray-600 transition-all hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-dark-3"
+                >
+                  <svg
+                    class="h-4 w-4 text-cyan-500"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    ><path
+                      d="M12 2v6l3-3M12 8l-3-3M2 12h6l-3 3M8 12l-3-3M22 12h-6l3-3M16 12l3-3M12 22v-6l3 3M12 16l-3 3"
+                    ></path></svg
+                  >
+                  100G大流量
+                </button>
+                <button
+                  type="button"
+                  data-tag="has_voice"
+                  class="quick-tag flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm text-gray-600 transition-all hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-dark-3"
+                >
+                  <svg
+                    class="h-4 w-4 text-green-500"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    ><path
+                      d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"
+                    ></path></svg
+                  >
+                  带通话榜单
+                </button>
+                <button
+                  type="button"
+                  data-tag="voice_100"
+                  class="quick-tag flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm text-gray-600 transition-all hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-dark-3"
+                >
+                  <svg
+                    class="h-4 w-4 text-emerald-500"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    ><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path
+                      d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"
+                    ></line></svg
+                  >
+                  100分钟+
+                </button>
+                <button
+                  type="button"
+                  data-tag="long_term"
+                  class="quick-tag flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm text-gray-600 transition-all hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-dark-3"
+                >
+                  <svg
+                    class="h-4 w-4 text-orange-500"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    ><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"
+                    ></polyline></svg
+                  >
+                  长期卡榜单
+                </button>
+                <button
+                  type="button"
+                  data-tag="short_term"
+                  class="quick-tag flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm text-gray-600 transition-all hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-dark-3"
+                >
+                  <svg
+                    class="h-4 w-4 text-rose-500"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    ><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line
+                      x1="16"
+                      y1="2"
+                      x2="16"
+                      y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line
+                      x1="3"
+                      y1="10"
+                      x2="21"
+                      y2="10"></line></svg
+                  >
+                  短期体验卡
+                </button>
+                <button
+                  type="button"
+                  data-tag="price_9"
+                  class="quick-tag flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm text-gray-600 transition-all hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-dark-3"
+                >
+                  <svg
+                    class="h-4 w-4 text-amber-500"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    ><line x1="12" y1="1" x2="12" y2="23"></line><path
+                      d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg
+                  >
+                  9元体验卡
+                </button>
+              </nav>
+            </div>
+          </div>
+        </aside>
+
+        <!-- ===== 中间：榜单列表主区域 ===== -->
+        <main class="min-w-0 flex-1">
+          <!-- 榜单标题栏 -->
+          <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+              <h2 id="rank-title" class="text-xl font-bold text-gray-900 dark:text-white">
+                今日榜单
+              </h2>
+              <span
+                class="rounded-full bg-gray-100/80 px-3 py-1 text-xs font-medium text-gray-400 dark:bg-dark-3 dark:text-gray-500"
+                >共 <span id="search-result-count">{totalCount}</span> 款</span
+              >
+            </div>
+          </div>
+
+          <!-- ===== 移动端筛选面板（lg 以下显示）===== -->
+          <div class="mb-5 space-y-4 lg:hidden">
+            <!-- 榜单类型 -->
+            <div>
+              <h4 class="mb-2 text-xs font-semibold text-gray-400 dark:text-gray-500">榜单类型</h4>
+              <div class="scrollbar-hide flex items-center gap-2 overflow-x-auto pb-1">
+                <button
+                  type="button"
+                  data-tab="all"
+                  class="search-tab active shrink-0 rounded-full bg-primary/5 px-4 py-2 text-xs font-medium text-primary transition-all dark:bg-primary/10"
+                >
+                  <span
+                    class="mr-1.5 inline-flex h-5 w-5 items-center justify-center rounded-md bg-blue-50 text-[10px] font-bold text-blue-500 dark:bg-blue-900/20"
+                    >NEW</span
+                  >
+                  今日榜单
+                </button>
+                <button
+                  type="button"
+                  data-tab="recommend"
+                  class="search-tab shrink-0 rounded-full border border-gray-200 bg-white px-4 py-2 text-xs text-gray-600 transition-all hover:border-primary hover:text-primary dark:border-dark-3 dark:bg-dark-3 dark:text-gray-400"
+                >
+                  <span
+                    class="mr-1.5 inline-flex h-5 w-5 items-center justify-center rounded-md bg-red-50 text-[10px] font-bold text-red-500 dark:bg-red-900/20"
+                    >HOT</span
+                  >
+                  热销榜单
+                </button>
+              </div>
+            </div>
+
+            <!-- 运营商 -->
+            <div>
+              <h4 class="mb-2 text-xs font-semibold text-gray-400 dark:text-gray-500">运营商</h4>
+              <div class="scrollbar-hide flex items-center gap-2 overflow-x-auto pb-1">
+                <button
+                  type="button"
+                  data-tab="mobile"
+                  class="search-tab flex shrink-0 items-center gap-1.5 rounded-full border border-gray-200 bg-white px-4 py-2 text-xs text-gray-600 transition-all hover:border-primary hover:text-primary dark:border-dark-3 dark:bg-dark-3 dark:text-gray-400"
+                >
+                  <span
+                    class="h-2.5 w-2.5 rounded-full bg-green-500 ring-2 ring-green-200 dark:ring-green-900/40"
+                  ></span>
+                  移动
+                </button>
+                <button
+                  type="button"
+                  data-tab="telecom"
+                  class="search-tab flex shrink-0 items-center gap-1.5 rounded-full border border-gray-200 bg-white px-4 py-2 text-xs text-gray-600 transition-all hover:border-primary hover:text-primary dark:border-dark-3 dark:bg-dark-3 dark:text-gray-400"
+                >
+                  <span
+                    class="h-2.5 w-2.5 rounded-full bg-blue-500 ring-2 ring-blue-200 dark:ring-blue-900/40"
+                  ></span>
+                  电信
+                </button>
+                <button
+                  type="button"
+                  data-tab="unicom"
+                  class="search-tab flex shrink-0 items-center gap-1.5 rounded-full border border-gray-200 bg-white px-4 py-2 text-xs text-gray-600 transition-all hover:border-primary hover:text-primary dark:border-dark-3 dark:bg-dark-3 dark:text-gray-400"
+                >
+                  <span
+                    class="h-2.5 w-2.5 rounded-full bg-orange-500 ring-2 ring-orange-200 dark:ring-orange-900/40"
+                  ></span>
+                  联通
+                </button>
+                <button
+                  type="button"
+                  data-tab="broadcast"
+                  class="search-tab flex shrink-0 items-center gap-1.5 rounded-full border border-gray-200 bg-white px-4 py-2 text-xs text-gray-600 transition-all hover:border-primary hover:text-primary dark:border-dark-3 dark:bg-dark-3 dark:text-gray-400"
+                >
+                  <span
+                    class="h-2.5 w-2.5 rounded-full bg-purple-500 ring-2 ring-purple-200 dark:ring-purple-900/40"
+                  ></span>
+                  广电
+                </button>
+              </div>
+            </div>
+
+            <!-- 特色榜单（快捷标签） -->
+            <div>
+              <h4 class="mb-2 text-xs font-semibold text-gray-400 dark:text-gray-500">特色榜单</h4>
+              <div class="scrollbar-hide flex items-center gap-2 overflow-x-auto pb-1">
+                <button
+                  type="button"
+                  data-tag="all"
+                  class="quick-tag active shrink-0 rounded-full bg-primary px-4 py-2 text-xs font-medium text-white transition-all"
+                  >全部</button
+                >
+                <button
+                  type="button"
+                  data-tag="long_term"
+                  class="quick-tag shrink-0 rounded-full border border-gray-200 bg-white px-4 py-2 text-xs text-gray-600 transition-all hover:border-primary hover:text-primary dark:border-dark-3 dark:bg-dark-3 dark:text-gray-400"
+                  >长期卡</button
+                >
+                <button
+                  type="button"
+                  data-tag="short_term"
+                  class="quick-tag shrink-0 rounded-full border border-gray-200 bg-white px-4 py-2 text-xs text-gray-600 transition-all hover:border-primary hover:text-primary dark:border-dark-3 dark:bg-dark-3 dark:text-gray-400"
+                  >短期体验</button
+                >
+                <button
+                  type="button"
+                  data-tag="price_9"
+                  class="quick-tag shrink-0 rounded-full border border-gray-200 bg-white px-4 py-2 text-xs text-gray-600 transition-all hover:border-primary hover:text-primary dark:border-dark-3 dark:bg-dark-3 dark:text-gray-400"
+                  >9元体验</button
+                >
+                <button
+                  type="button"
+                  data-tag="low_price"
+                  class="quick-tag shrink-0 rounded-full border border-gray-200 bg-white px-4 py-2 text-xs text-gray-600 transition-all hover:border-primary hover:text-primary dark:border-dark-3 dark:bg-dark-3 dark:text-gray-400"
+                  >19元以下</button
+                >
+                <button
+                  type="button"
+                  data-tag="price_29"
+                  class="quick-tag shrink-0 rounded-full border border-gray-200 bg-white px-4 py-2 text-xs text-gray-600 transition-all hover:border-primary hover:text-primary dark:border-dark-3 dark:bg-dark-3 dark:text-gray-400"
+                  >29元档</button
+                >
+                <button
+                  type="button"
+                  data-tag="big_flow"
+                  class="quick-tag shrink-0 rounded-full border border-gray-200 bg-white px-4 py-2 text-xs text-gray-600 transition-all hover:border-primary hover:text-primary dark:border-dark-3 dark:bg-dark-3 dark:text-gray-400"
+                  >200G以上</button
+                >
+                <button
+                  type="button"
+                  data-tag="flow_100"
+                  class="quick-tag shrink-0 rounded-full border border-gray-200 bg-white px-4 py-2 text-xs text-gray-600 transition-all hover:border-primary hover:text-primary dark:border-dark-3 dark:bg-dark-3 dark:text-gray-400"
+                  >100G+</button
+                >
+                <button
+                  type="button"
+                  data-tag="has_voice"
+                  class="quick-tag shrink-0 rounded-full border border-gray-200 bg-white px-4 py-2 text-xs text-gray-600 transition-all hover:border-primary hover:text-primary dark:border-dark-3 dark:bg-dark-3 dark:text-gray-400"
+                  >带通话</button
+                >
+                <button
+                  type="button"
+                  data-tag="voice_100"
+                  class="quick-tag shrink-0 rounded-full border border-gray-200 bg-white px-4 py-2 text-xs text-gray-600 transition-all hover:border-primary hover:text-primary dark:border-dark-3 dark:bg-dark-3 dark:text-gray-400"
+                  >100分钟+</button
+                >
+              </div>
+            </div>
+          </div>
+
+          <!-- 空态 -->
+          <div
+            id="search-empty"
+            class="hidden flex-col items-center rounded-2xl bg-white py-20 text-center shadow-sm dark:bg-dark-2"
+          >
+            <div
+              class="mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-gray-50 dark:bg-dark-3"
+            >
+              <svg
+                class="h-8 w-8 text-gray-300"
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"
+                ></line>
+              </svg>
+            </div>
+            <p class="text-lg font-semibold text-gray-500">暂无符合条件的套餐</p>
+            <p class="mt-2 text-sm text-gray-400">请尝试切换榜单分类或搜索关键词</p>
+          </div>
+
+          <!-- 榜单列表 -->
+          <div id="search-grid" class="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
+            <!-- 由客户端 JS 动态渲染 -->
+          </div>
+
+          <!-- 加载更多 -->
+          <div id="search-loadmore" class="mt-14 flex flex-col items-center gap-4">
+            <button
+              id="search-load-btn"
+              type="button"
+              class="inline-flex items-center gap-2.5 rounded-2xl border border-gray-200 bg-white px-10 py-3.5 text-sm font-semibold text-gray-600 shadow-sm transition-all duration-200 hover:border-primary/30 hover:bg-primary/[0.03] hover:text-primary hover:shadow-md active:scale-[0.98] dark:border-dark-3 dark:bg-dark-2 dark:text-gray-300"
+            >
+              <svg
+                class="h-4 w-4"
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+              加载更多
+            </button>
+            <div id="search-all-loaded" class="hidden items-center gap-2 text-sm text-gray-400">
+              <span class="inline-block h-1.5 w-1.5 rounded-full bg-primary"></span>
+              已展示全部商品
+            </div>
+          </div>
+        </main>
+
+        <!-- ===== 右侧：辅助面板 ===== -->
+        <aside class="hidden shrink-0 xl:block xl:w-72">
+          <div class="sticky top-28 space-y-6">
+            <!-- 统计面板 -->
+            <div
+              class="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm dark:border-dark-3 dark:bg-dark-2"
+            >
+              <h3 class="mb-4 text-sm font-bold text-gray-800 dark:text-gray-200">榜单统计</h3>
+              <div class="space-y-3">
+                <div class="flex items-center justify-between text-sm">
+                  <span class="text-gray-500">已展示</span>
+                  <span class="font-bold text-gray-900 dark:text-white"
+                    ><span id="search-shown">0</span> 款</span
+                  >
+                </div>
+                <div class="flex items-center justify-between text-sm">
+                  <span class="text-gray-500">共收录</span>
+                  <span class="font-bold text-gray-900 dark:text-white"
+                    ><span id="search-total">0</span> 款</span
+                  >
+                </div>
+                <div class="h-2 overflow-hidden rounded-full bg-gray-100 dark:bg-dark-3">
+                  <div
+                    id="search-progress"
+                    class="h-full rounded-full bg-gradient-to-r from-primary to-blue-500 transition-all duration-500"
+                    style="width:0%"
+                  >
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- 快捷筛选 -->
+            <div
+              class="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm dark:border-dark-3 dark:bg-dark-2"
+            >
+              <h3 class="mb-4 text-sm font-bold text-gray-800 dark:text-gray-200">快捷筛选</h3>
+              <div id="search-quick-tags" class="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  data-tag="all"
+                  class="quick-tag active rounded-full bg-primary px-4 py-1.5 text-xs font-medium text-white transition-all"
+                  >全部</button
+                >
+                <button
+                  type="button"
+                  data-tag="long_term"
+                  class="quick-tag rounded-full border border-gray-200 bg-white px-4 py-1.5 text-xs text-gray-600 transition-all hover:border-primary hover:text-primary dark:border-dark-3 dark:bg-dark-3 dark:text-gray-400"
+                  >长期卡</button
+                >
+                <button
+                  type="button"
+                  data-tag="short_term"
+                  class="quick-tag rounded-full border border-gray-200 bg-white px-4 py-1.5 text-xs text-gray-600 transition-all hover:border-primary hover:text-primary dark:border-dark-3 dark:bg-dark-3 dark:text-gray-400"
+                  >短期体验</button
+                >
+                <button
+                  type="button"
+                  data-tag="price_9"
+                  class="quick-tag rounded-full border border-gray-200 bg-white px-4 py-1.5 text-xs text-gray-600 transition-all hover:border-primary hover:text-primary dark:border-dark-3 dark:bg-dark-3 dark:text-gray-400"
+                  >9元体验</button
+                >
+                <button
+                  type="button"
+                  data-tag="low_price"
+                  class="quick-tag rounded-full border border-gray-200 bg-white px-4 py-1.5 text-xs text-gray-600 transition-all hover:border-primary hover:text-primary dark:border-dark-3 dark:bg-dark-3 dark:text-gray-400"
+                  >19元以下</button
+                >
+                <button
+                  type="button"
+                  data-tag="price_29"
+                  class="quick-tag rounded-full border border-gray-200 bg-white px-4 py-1.5 text-xs text-gray-600 transition-all hover:border-primary hover:text-primary dark:border-dark-3 dark:bg-dark-3 dark:text-gray-400"
+                  >29元档</button
+                >
+                <button
+                  type="button"
+                  data-tag="big_flow"
+                  class="quick-tag rounded-full border border-gray-200 bg-white px-4 py-1.5 text-xs text-gray-600 transition-all hover:border-primary hover:text-primary dark:border-dark-3 dark:bg-dark-3 dark:text-gray-400"
+                  >200G以上</button
+                >
+                <button
+                  type="button"
+                  data-tag="flow_100"
+                  class="quick-tag rounded-full border border-gray-200 bg-white px-4 py-1.5 text-xs text-gray-600 transition-all hover:border-primary hover:text-primary dark:border-dark-3 dark:bg-dark-3 dark:text-gray-400"
+                  >100G+</button
+                >
+                <button
+                  type="button"
+                  data-tag="has_voice"
+                  class="quick-tag rounded-full border border-gray-200 bg-white px-4 py-1.5 text-xs text-gray-600 transition-all hover:border-primary hover:text-primary dark:border-dark-3 dark:bg-dark-3 dark:text-gray-400"
+                  >带通话</button
+                >
+                <button
+                  type="button"
+                  data-tag="voice_100"
+                  class="quick-tag rounded-full border border-gray-200 bg-white px-4 py-1.5 text-xs text-gray-600 transition-all hover:border-primary hover:text-primary dark:border-dark-3 dark:bg-dark-3 dark:text-gray-400"
+                  >100分钟+</button
+                >
+              </div>
+            </div>
+            <!-- 温馨提示 -->
+            <div
+              class="rounded-2xl border border-blue-100 bg-blue-50/50 p-5 dark:border-blue-900/20 dark:bg-blue-900/10"
+            >
+              <h3
+                class="mb-2 flex items-center gap-2 text-sm font-bold text-blue-800 dark:text-blue-300"
+              >
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                  ><path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg
+                >
+                温馨提示
+              </h3>
+              <p class="text-xs leading-relaxed text-blue-700/70 dark:text-blue-300/60">
+                所有号卡均为官方正规套餐，支持线上办理、全国包邮。下单前请仔细阅读套餐说明，确保符合办理条件。
+              </p>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== SEO 选购指南区块（覆盖长尾关键词） ===== -->
+  <section class="bg-white py-10 dark:bg-dark-2 md:py-14">
+    <div class="container mx-auto px-4">
+      <article>
+        <!-- 标题区 -->
+        <h2 class="mb-6 text-center text-xl font-bold text-gray-800 dark:text-white sm:text-2xl">
+          流量卡怎么选？2026年手机流量卡选购指南
+        </h2>
+        <p class="mb-8 text-center text-sm text-gray-500 dark:text-gray-400">
+          覆盖电信/移动/联通/广电四大运营商，从价格、流量、时长、网速四大维度帮你避坑
+        </p>
+
+        <!-- 三列要点卡片 -->
+        <div class="grid gap-4 sm:grid-cols-3">
+          <!-- 要点 1：价格选型 -->
+          <div
+            class="rounded-xl border border-gray-100 bg-white p-5 shadow-sm dark:border-dark-3 dark:bg-dark-3"
+          >
+            <div
+              class="mb-3 inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-600 dark:bg-blue-900/20 dark:text-blue-400"
+            >
+              <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                ><path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
+                ></path></svg
+              >
+              价格选型
+            </div>
+            <h3 class="mb-2 text-sm font-bold text-gray-800 dark:text-gray-200">
+              月租预算决定套餐档位
+            </h3>
+            <ul class="space-y-1.5 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
+              <li>
+                · <strong class="text-gray-700 dark:text-gray-300">9-19元档</strong
+                >：学生党、备用机首选，流量100-200G
+              </li>
+              <li>
+                · <strong class="text-gray-700 dark:text-gray-300">29元档</strong
+                >：性价比黄金价位，流量150-200G+通话
+              </li>
+              <li>
+                · <strong class="text-gray-700 dark:text-gray-300">39元以上</strong
+                >：大流量+高速率，适合主卡用户
+              </li>
+            </ul>
+          </div>
+
+          <!-- 要点 2：运营商对比 -->
+          <div
+            class="rounded-xl border border-gray-100 bg-white p-5 shadow-sm dark:border-dark-3 dark:bg-dark-3"
+          >
+            <div
+              class="mb-3 inline-flex items-center gap-2 rounded-full bg-green-50 px-3 py-1 text-xs font-semibold text-green-600 dark:bg-green-900/20 dark:text-green-400"
+            >
+              <svg
+                class="h-3.5 w-3.5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                stroke-width="2"
+                ><circle cx="12" cy="12" r="3"></circle><path
+                  d="M12 2v4m0 12v4m-6.93-3.07l2.83-2.83m8.2-8.2l2.83-2.83M2 12h4m12 0h4m-15.07 6.93l2.83-2.83m8.2-8.2l2.83-2.83"
+                ></path></svg
+              >
+              运营商对比
+            </div>
+            <h3 class="mb-2 text-sm font-bold text-gray-800 dark:text-gray-200">
+              四大运营商各有优势
+            </h3>
+            <ul class="space-y-1.5 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
+              <li>
+                · <strong class="text-gray-700 dark:text-gray-300">电信</strong
+                >：覆盖广、网速稳定，星卡系列口碑好
+              </li>
+              <li>
+                · <strong class="text-gray-700 dark:text-gray-300">移动</strong
+                >：用户基数大，花卡系列性价比高
+              </li>
+              <li>
+                · <strong class="text-gray-700 dark:text-gray-300">联通</strong
+                >：套餐灵活，流量单价低
+              </li>
+              <li>
+                · <strong class="text-gray-700 dark:text-gray-300">广电</strong
+                >：新兴运营商，192G超大流量套餐
+              </li>
+            </ul>
+          </div>
+
+          <!-- 要点 3：避坑指南 -->
+          <div
+            class="rounded-xl border border-gray-100 bg-white p-5 shadow-sm dark:border-dark-3 dark:bg-dark-3"
+          >
+            <div
+              class="mb-3 inline-flex items-center gap-2 rounded-full bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-600 dark:bg-orange-900/20 dark:text-orange-400"
+            >
+              <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                ><path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                ></path></svg
+              >
+              避坑指南
+            </div>
+            <h3 class="mb-2 text-sm font-bold text-gray-800 dark:text-gray-200">
+              办卡前必看的防坑要点
+            </h3>
+            <ul class="space-y-1.5 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
+              <li>
+                · 确认是<strong class="text-gray-700 dark:text-gray-300">通用流量</strong
+                >还是定向流量
+              </li>
+              <li>
+                · 看清<strong class="text-gray-700 dark:text-gray-300">合约期</strong
+                >，长期卡更稳定但受限
+              </li>
+              <li>
+                · 关注<strong class="text-gray-700 dark:text-gray-300">限速阈值</strong
+                >，超量后是否降速
+              </li>
+              <li>
+                · 只选<strong class="text-gray-700 dark:text-gray-300">正规渠道</strong
+                >办理，拒绝物联卡
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- 底部 FAQ 式文本（覆盖问题型长尾词） -->
+        <div class="mt-8 rounded-xl bg-gray-50 p-5 dark:bg-dark-3 sm:p-6">
+          <h3 class="mb-3 text-sm font-bold text-gray-700 dark:text-gray-200">
+            常见问题：流量卡哪个好？
+          </h3>
+          <div class="space-y-3 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
+            <p>
+              <strong class="text-gray-700 dark:text-gray-300">学生党推荐：</strong
+              >优先选择19元档套餐，如电信星卡19元版、广电福兔卡等，流量充足且月租低，适合日常上网、刷视频使用。支持双卡双待，搭配主卡通话两不误。
+            </p>
+            <p>
+              <strong class="text-gray-700 dark:text-gray-300">上班族推荐：</strong
+              >建议选择29-39元档的长期套餐流量卡，流量150-200G以上，不限速全国通用，适合日常办公、视频会议、户外直播等场景。优先选电信或联通，网速和稳定性更有保障。
+            </p>
+            <p>
+              <strong class="text-gray-700 dark:text-gray-300">如何避免踩坑：</strong
+              >务必通过正规渠道办理，确认是实名制手机卡而非物联卡。关注套餐的通用流量占比，避免虚标偷跑。合约期建议选1-2年，既能享受优惠价又不影响后续携号转网。
+            </p>
+          </div>
+        </div>
+      </article>
+    </div>
+  </section>
+</Layout>
+
+<!-- ===== 客户端交互脚本 ===== -->
+<!-- 使用 define:vars 将 frontmatter 变量安全传递到 is:inline 脚本 -->
+<script is:inline define:vars={{ clientProducts, clientErrors }}>
+  /**
+   * 榜单页客户端交互脚本
+   *
+   * 职责：
+   * - 接收 Astro frontmatter 通过 define:vars 注入的商品数据
+   * - 实现关键词搜索、榜单分类导航、快捷标签筛选
+   * - 横向榜单行渲染（带排名序号）
+   * - 分页加载（每次 12 条）与进度条展示
+   * - 所有语法使用 ES5 兼容写法（var / function / 字符串拼接）
+   */
+
+  /** 商品数据（由 Astro define:vars 注入） */
+  var rawProducts = clientProducts || [];
+  var platformErrors = clientErrors || [];
+
+  /** 运营商样式配色 */
+  var OP_STYLE = {
+    mobile: {
+      badge: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+      dot: 'bg-green-500',
+      gradient: 'from-green-500 to-emerald-600',
+      light: 'bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400',
+    },
+    telecom: {
+      badge: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+      dot: 'bg-blue-500',
+      gradient: 'from-blue-500 to-blue-700',
+      light: 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400',
+    },
+    unicom: {
+      badge: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
+      dot: 'bg-orange-500',
+      gradient: 'from-orange-500 to-red-500',
+      light: 'bg-orange-50 text-orange-600 dark:bg-orange-900/20 dark:text-orange-400',
+    },
+    broadcast: {
+      badge: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
+      dot: 'bg-purple-500',
+      gradient: 'from-purple-500 to-indigo-600',
+      light: 'bg-purple-50 text-purple-600 dark:bg-purple-900/20 dark:text-purple-400',
+    },
+    unknown: {
+      badge: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
+      dot: 'bg-gray-400',
+      gradient: 'from-gray-400 to-gray-600',
+      light: 'bg-gray-50 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
+    },
+  };
+
+  /** 平台角标配色 */
+  var PLATFORM_BADGE = {
+    '172haoka': 'bg-blue-500 text-white',
+    haokavip: 'bg-red-500 text-white',
+    linxi: 'bg-teal-500 text-white',
+    yky: 'bg-indigo-500 text-white',
+    gth: 'bg-amber-500 text-white',
+  };
+
+  /** 榜单标题映射 */
+  var RANK_TITLES = {
+    all: '今日榜单',
+    recommend: '热销榜单',
+    mobile: '中国移动榜单',
+    telecom: '中国电信榜单',
+    unicom: '中国联通榜单',
+    broadcast: '中国广电榜单',
+  };
+  var TAG_TITLES = {
+    long_term: '长期卡',
+    short_term: '短期体验卡',
+    price_9: '9元体验卡',
+    low_price: '19元以下',
+    price_29: '29元档',
+    big_flow: '200G大流量',
+    flow_100: '100G大流量',
+    has_voice: '带通话',
+    voice_100: '100分钟+',
+  };
+
+  /* ========== DOM 引用 ========== */
+  var searchInput = document.getElementById('search-input');
+  var searchClear = document.getElementById('search-clear');
+  var searchGrid = document.getElementById('search-grid');
+  var searchEmpty = document.getElementById('search-empty');
+  var resultCount = document.getElementById('search-result-count');
+  var loadBtn = document.getElementById('search-load-btn');
+  var allLoaded = document.getElementById('search-all-loaded');
+  var progressBar = document.getElementById('search-progress');
+  var shownCount = document.getElementById('search-shown');
+  var totalCountEl = document.getElementById('search-total');
+  var rankTitle = document.getElementById('rank-title');
+
+  /* ========== 状态 ========== */
+  var PAGE_SIZE = 18;
+  var activeTab = 'all';
+  var activeTag = 'all';
+  var searchQuery = '';
+  var visibleCount = PAGE_SIZE;
+
+  /* ========== 筛选匹配 ========== */
+
+  /** 关键词搜索（空格分词 AND 匹配） */
+  function matchSearch(name, query) {
+    if (!query.trim()) return true;
+    var tokens = query.trim().toLowerCase().split(/\s+/);
+    var n = name.toLowerCase();
+    return tokens.every(function (t) {
+      return n.indexOf(t) !== -1;
+    });
+  }
+
+  /** 运营商 Tab 匹配 */
+  function matchTab(p) {
+    if (activeTab === 'all') return true;
+    if (activeTab === 'recommend') {
+      /* 热销榜单：仅显示被标记为推荐、且满足以下任一条件的商品：
+         - 月租在 9-39 元热门价格区间
+         - 流量 >= 80GB
+         避免与普通列表重复度过高 */
+      if (!p.rc) return false;
+      var goodPrice = p.pr >= 9 && p.pr <= 39;
+      var goodFlow = p.fl >= 80;
+      return goodPrice || goodFlow;
+    }
+    return p.op === activeTab;
+  }
+
+  /** 快捷标签匹配 */
+  function matchTag(p) {
+    switch (activeTag) {
+      case 'all':
+        return true;
+      case 'long_term':
+        return p.du === '长期';
+      case 'short_term':
+        return p.du !== '长期' && p.du !== '' && p.du !== '未知';
+      case 'price_9':
+        return p.pr > 0 && p.pr <= 9;
+      case 'low_price':
+        return p.pr > 0 && p.pr <= 19;
+      case 'price_29':
+        return p.pr >= 25 && p.pr <= 35;
+      case 'big_flow':
+        return p.fl >= 200;
+      case 'flow_100':
+        return p.fl >= 100;
+      case 'has_voice':
+        return p.vo > 0;
+      case 'voice_100':
+        return p.vo >= 100;
+      default:
+        return true;
+    }
+  }
+
+  /** 获取筛选后的商品列表 */
+  function getFiltered() {
+    return rawProducts.filter(function (p) {
+      return matchTab(p) && matchTag(p) && matchSearch(p.n, searchQuery);
+    });
+  }
+
+  /* ========== 卡片渲染 ========== */
+
+  /**
+   * 渲染单个商品卡片
+   *
+   * 极简文案优先设计，清晰的信息层级：
+   *   商品名称 → 标签行（运营商/平台/排名）→ 参数文案 → 价格+按钮
+   *   无多余装饰色块，以排版和字体粗细区分层级
+   *
+   * @param p - 当前商品数据
+   * @param rank - 当前商品排名
+   * @param delay - 动画延迟毫秒数
+   * @returns 商品卡片 HTML 字符串
+   */
+  function renderRow(p, rank, delay) {
+    var opStyle = OP_STYLE[p.op] || OP_STYLE.unknown;
+    var pfBadge = PLATFORM_BADGE[p.pf] || 'bg-gray-500 text-white';
+    var animStyle = delay ? ' style="animation-delay:' + delay + 'ms"' : '';
+
+    /* 排名标识（纯文字，TOP 1-3 高亮色，其余灰色序号） */
+    var rankText = '';
+    if (rank === 1) {
+      rankText = '<span class="text-[11px] font-bold text-amber-500">No.1</span>';
+    } else if (rank === 2) {
+      rankText = '<span class="text-[11px] font-bold text-gray-400">No.2</span>';
+    } else if (rank === 3) {
+      rankText = '<span class="text-[11px] font-bold text-amber-700">No.3</span>';
+    } else if (rank <= 12) {
+      rankText =
+        '<span class="text-[11px] font-medium text-gray-300 dark:text-gray-600">No.' +
+        rank +
+        '</span>';
+    }
+
+    /* 热销标识 */
+    var recText = p.rc ? '<span class="text-[11px] font-semibold text-red-400">热销</span>' : '';
+
+    /* 运营商 + 平台标签（纯文字，用中点分隔） */
+    var metaParts = [];
+    metaParts.push(
+      '<span class="font-medium ' +
+        opStyle.badge.replace(/rounded-md|px-1\.5/g, '').trim() +
+        '">' +
+        p.ol +
+        '</span>'
+    );
+    metaParts.push('<span class="text-gray-300 dark:text-gray-600">\xB7</span>');
+    metaParts.push('<span class="text-gray-400">' + p.pl + '</span>');
+    if (p.re) {
+      metaParts.push('<span class="text-gray-300 dark:text-gray-600">\xB7</span>');
+      metaParts.push('<span class="text-gray-400">' + p.re + '</span>');
+    }
+    if (rankText) {
+      metaParts.push('<span class="text-gray-200 dark:text-gray-700 mx-0.5">|</span>');
+      metaParts.push(rankText);
+    }
+    if (recText) {
+      metaParts.push('<span class="text-gray-200 dark:text-gray-700 mx-0.5">|</span>');
+      metaParts.push(recText);
+    }
+    var metaHtml =
+      '<div class="flex flex-wrap items-center gap-x-1.5 text-[12px]">' +
+      metaParts.join('') +
+      '</div>';
+
+    /* 核心参数行 — 简洁文案式，用竖线分隔 */
+    var specs = [];
+    if (p.fl > 0)
+      specs.push(
+        '<span class="font-medium text-gray-700 dark:text-gray-300">' + p.fl + 'GB</span>'
+      );
+    if (p.vo > 0)
+      specs.push(
+        '<span class="font-medium text-gray-700 dark:text-gray-300">' + p.vo + '分钟</span>'
+      );
+    if (p.du && p.du !== '\u672A\u77E5')
+      specs.push('<span class="font-medium text-gray-700 dark:text-gray-300">' + p.du + '</span>');
+    var specsHtml =
+      specs.length > 0
+        ? '<div class="flex items-center gap-2 text-[13px] text-gray-400 dark:text-gray-500">' +
+          specs.join('<span class="h-3 w-px bg-gray-200 dark:bg-gray-700"></span>') +
+          '</div>'
+        : '';
+
+    /* 月租价格 */
+    var priceHtml =
+      p.pr > 0
+        ? '<span class="text-lg font-bold text-gray-900 dark:text-white">' +
+          p.pr +
+          '<span class="text-xs font-normal text-gray-400">元/月</span></span>'
+        : '<span class="text-sm text-gray-400">面议</span>';
+
+    /* 操作按钮 */
+    var orderLink = p.o || p.d;
+    var isExternalOrder = !!p.o && p.o !== p.d;
+    var orderTarget = isExternalOrder ? ' target="_blank" rel="noopener noreferrer"' : '';
+
+    return (
+      '<div class="group relative flex flex-col overflow-hidden rounded-xl border border-gray-100 bg-white transition-all duration-200 hover:border-gray-200 hover:shadow-lg hover:shadow-black/[0.04] dark:border-dark-3 dark:bg-dark-2 dark:hover:border-dark-3/60 card-animate"' +
+      animStyle +
+      '>' +
+      /* 全局点击跳转覆盖层 */
+      '<a href="' +
+      p.d +
+      '" class="absolute inset-0 z-20" aria-label="' +
+      p.n.replace(/"/g, '&quot;') +
+      '"></a>' +
+      /* 卡片主体 */
+      '<div class="flex flex-1 flex-col p-5">' +
+      /* 第一层：运营商/平台/排名 标签行 */
+      metaHtml +
+      /* 第二层：商品名称 */
+      '<h3 class="mt-3 mb-3 line-clamp-2 text-[15px] font-medium leading-snug text-gray-900 transition-colors group-hover:text-primary dark:text-white dark:group-hover:text-primary">' +
+      p.n +
+      '</h3>' +
+      /* 第三层：核心参数 */
+      '<div class="mb-4 min-h-[20px]">' +
+      specsHtml +
+      '</div>' +
+      /* 弹性占位 */
+      '<div class="flex-1"></div>' +
+      /* 第四层：价格 + 办理按钮 */
+      '<div class="mt-auto flex items-center justify-between border-t border-gray-50 pt-3 dark:border-dark-3">' +
+      priceHtml +
+      '<a href="' +
+      orderLink +
+      '"' +
+      orderTarget +
+      ' class="relative z-30 text-[12px] font-medium text-primary hover:underline" onclick="event.stopPropagation();">' +
+      '办理 →' +
+      '</a>' +
+      '</div>' +
+      '</div>' +
+      '</div>'
+    );
+  }
+
+  /* ========== 渲染 ========== */
+
+  /** 更新榜单标题 */
+  function updateRankTitle() {
+    if (!rankTitle) return;
+    var t = RANK_TITLES[activeTab] || '今日榜单';
+    if (activeTag !== 'all') {
+      t = t + ' \xB7 ' + (TAG_TITLES[activeTag] || '');
+    }
+    rankTitle.textContent = t;
+  }
+
+  /** 渲染榜单列表 */
+  function render() {
+    if (!searchGrid) return;
+    var filtered = getFiltered();
+    var displayed = filtered.slice(0, visibleCount);
+    var hasMore = displayed.length < filtered.length;
+
+    /** 更新计数 */
+    if (resultCount) resultCount.textContent = String(filtered.length);
+    if (totalCountEl) totalCountEl.textContent = String(filtered.length);
+    if (shownCount) shownCount.textContent = String(displayed.length);
+
+    /** 空态显隐 */
+    if (searchEmpty) searchEmpty.classList.toggle('hidden', filtered.length > 0);
+    searchGrid.classList.toggle('hidden', filtered.length === 0);
+
+    /** 渲染卡片，添加交错淡入动画 */
+    var html = '';
+    for (var idx = 0; idx < displayed.length; idx++) {
+      var delay = (idx % 3) * 80;
+      html += renderRow(displayed[idx], idx + 1, delay);
+    }
+    searchGrid.innerHTML = html;
+
+    /** 加载更多按钮 */
+    if (hasMore) {
+      if (loadBtn) loadBtn.classList.remove('hidden');
+      if (allLoaded) allLoaded.classList.add('hidden');
+      var remaining = filtered.length - displayed.length;
+      if (loadBtn) {
+        loadBtn.innerHTML =
+          '<svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>' +
+          '加载更多（还有 ' +
+          remaining +
+          ' 款）';
+      }
+    } else {
+      if (loadBtn) loadBtn.classList.add('hidden');
+      if (allLoaded) allLoaded.classList.toggle('hidden', filtered.length === 0);
+    }
+
+    /** 进度条 */
+    if (filtered.length > 0 && progressBar) {
+      progressBar.style.width = Math.round((displayed.length / filtered.length) * 100) + '%';
+    }
+  }
+
+  /* ========== 事件绑定 ========== */
+
+  /** Tab / 分类点击（左侧边栏） */
+  function onTabClick(tab) {
+    if (activeTag !== 'all') activeTag = 'all';
+    activeTab = tab;
+    visibleCount = PAGE_SIZE;
+    updateTabs();
+    updateTags();
+    updateRankTitle();
+    render();
+  }
+
+  /** Tag 点击（快捷筛选） */
+  function onTagClick(tag) {
+    if (activeTab !== 'all') activeTab = 'all';
+    activeTag = tag;
+    visibleCount = PAGE_SIZE;
+    updateTabs();
+    updateTags();
+    updateRankTitle();
+    render();
+  }
+
+  document.querySelectorAll('.search-tab').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      if (btn.dataset.tab) onTabClick(btn.dataset.tab);
+      if (btn.dataset.tag) onTagClick(btn.dataset.tag);
+    });
+  });
+
+  document.querySelectorAll('.quick-tag').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      onTagClick(btn.dataset.tag || 'all');
+    });
+  });
+
+  /** 搜索输入 */
+  if (searchInput) {
+    searchInput.addEventListener('input', function () {
+      searchQuery = searchInput.value;
+      visibleCount = PAGE_SIZE;
+      if (searchClear) searchClear.classList.toggle('hidden', !searchQuery);
+      render();
+    });
+  }
+
+  /** 清除搜索 */
+  if (searchClear) {
+    searchClear.addEventListener('click', function () {
+      if (searchInput) searchInput.value = '';
+      searchQuery = '';
+      searchClear.classList.add('hidden');
+      visibleCount = PAGE_SIZE;
+      render();
+    });
+  }
+
+  /** 加载更多 */
+  if (loadBtn) {
+    loadBtn.addEventListener('click', function () {
+      visibleCount += PAGE_SIZE;
+      render();
+    });
+  }
+
+  /** 更新左侧边栏 Tab 样式 */
+  function updateTabs() {
+    document.querySelectorAll('.search-tab').forEach(function (b) {
+      var isActive = false;
+      if (b.dataset.tab && b.dataset.tab === activeTab && activeTag === 'all') {
+        isActive = true;
+      }
+      if (b.dataset.tag && b.dataset.tag === activeTag) {
+        isActive = true;
+      }
+      /** active 状态 */
+      b.classList.toggle('bg-primary/5', isActive);
+      b.classList.toggle('text-primary', isActive);
+      b.classList.toggle('dark:bg-primary/10', isActive);
+      /** inactive 状态 */
+      b.classList.toggle('text-gray-600', !isActive);
+      b.classList.toggle('dark:text-gray-300', !isActive);
+      b.classList.toggle('hover:bg-gray-50', !isActive);
+      b.classList.toggle('dark:hover:bg-dark-3', !isActive);
+    });
+  }
+
+  /** 更新右侧快捷标签样式 */
+  function updateTags() {
+    document.querySelectorAll('.quick-tag').forEach(function (b) {
+      var isActive = b.dataset.tag === activeTag;
+      b.classList.toggle('bg-primary', isActive);
+      b.classList.toggle('text-white', isActive);
+      b.classList.toggle('border-gray-200', !isActive);
+      b.classList.toggle('bg-white', !isActive);
+      b.classList.toggle('text-gray-600', !isActive);
+      b.classList.toggle('dark:border-dark-3', !isActive);
+      b.classList.toggle('dark:bg-dark-3', !isActive);
+      b.classList.toggle('dark:text-gray-400', !isActive);
+    });
+  }
+
+  /* ========== 初始化入口 ========== */
+  function initSearch() {
+    updateRankTitle();
+    render();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initSearch);
+  } else {
+    initSearch();
+  }
+</script>
+
+<style>
+  /** 隐藏横向滚动条但保留触摸滚动 */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /** 卡片淡入动画 */
+  @keyframes cardFadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(20px) scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  .card-animate {
+    animation: cardFadeIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+</style>

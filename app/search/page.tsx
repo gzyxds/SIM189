@@ -1,7 +1,7 @@
 /**
  * 全局搜索页 — 服务端入口
  *
- * 并行拉取 6 大平台（浩卡联盟/172号卡/林夕通信/卡世界/翼卡云/共创号卡）商品数据，
+ * 并行拉取 7 大平台（浩卡联盟/172号卡/林夕通信/卡世界/翼卡云/共创号卡/卡业联盟）商品数据，
  * 将各平台异构数据统一映射为 UnifiedProduct 格式，传递给客户端组件进行交互。
  *
  * 路由：/search
@@ -21,6 +21,8 @@ import { fetchYkyProducts, getYkyOrderUrl } from "@/lib/api/yky";
 import type { YkyProductWithMeta } from "@/lib/api/yky";
 import { fetchGongchuangProducts } from "@/lib/api/gongchuang";
 import type { GongchuangProductWithMeta } from "@/lib/api/gongchuang";
+import { fetchGantanhaoProducts } from "@/lib/api/gantanhao";
+import type { GantanhaoProductWithMeta } from "@/lib/api/gantanhao";
 import SearchContent from "./SearchContent";
 import type { UnifiedProduct, PlatformKey, UnifiedOperator } from "./types";
 
@@ -40,9 +42,9 @@ export type { PlatformKey, UnifiedOperator, UnifiedProduct } from "./types";
  * - 痛点词：流量卡哪个好/不限速/正规渠道
  */
 export const metadata: Metadata = {
-    title: "2026流量卡搜索对比 | 19元29元大流量卡推荐 5G手机卡在线办理 - 号卡之家",
+    title: "2026流量卡搜索对比 | 19元29元大流量卡推荐 5G手机卡在线办理",
     description:
-        "2026年最新流量卡对比搜索，聚合6大平台1000+款套餐。19元200G、29元大流量卡、39元长期套餐一键筛选。电信/移动/联通/广电5G流量卡哪个好？正规渠道免费申请，不限速全国通用。",
+        "2026年最新流量卡对比搜索，聚合7大平台1000+款套餐。19元200G、29元大流量卡、39元长期套餐一键筛选。电信/移动/联通/广电5G流量卡哪个好？正规渠道免费申请，不限速全国通用。",
     keywords: [
         /* === 核心品类词 === */
         "流量卡",
@@ -94,7 +96,7 @@ export const metadata: Metadata = {
     openGraph: {
         title: "2026流量卡搜索对比 | 19元29元大流量卡推荐",
         description:
-            "聚合6大平台1000+款套餐，支持按运营商/价格/流量/时长多维筛选，一键对比找到最适合你的流量卡。",
+            "聚合7大平台1000+款套餐，支持按运营商/价格/流量/时长多维筛选，一键对比找到最适合你的流量卡。",
         type: "website",
     },
 };
@@ -279,12 +281,35 @@ function mapGongchuang(p: GongchuangProductWithMeta): UnifiedProduct {
     };
 }
 
+/**
+ * 将卡业联盟（感叹号）商品映射为 UnifiedProduct
+ * @param p - 卡业联盟扩展商品
+ */
+function mapGantanhao(p: GantanhaoProductWithMeta): UnifiedProduct {
+    return {
+        id: p.codeNumber,
+        platform: "gantanhao",
+        name: p.name,
+        image: p.img || "",
+        detailUrl: `/gantanhao/${p.codeNumber}`,
+        orderUrl: p._orderUrl || "",
+        operator: p._provider,
+        price: parsePrice(p._price),
+        flow: parseFlowGB(p._flow),
+        voice: parseVoiceMinutes(p.subName),
+        duration: p._duration || "未知",
+        region: p._location || "",
+        tags: p._tags.map((t) => t.text),
+        commissionType: p.rebateType === 2 ? "秒返" : p.rebateType === 1 ? "月返" : undefined,
+    };
+}
+
 /* ========== 主入口 ========== */
 
-/** 搜索页服务端组件 — 并行拉取6平台数据并统一映射 */
+/** 搜索页服务端组件 — 并行拉取7平台数据并统一映射 */
 export default async function SearchPage() {
     /** 并行拉取所有平台数据，各自独立容错 */
-    const [haokaRes, lotmlRes, linxiRes, ksjRes, ykyRes, gongchuangRes] =
+    const [haokaRes, lotmlRes, linxiRes, ksjRes, ykyRes, gongchuangRes, gantanhaoRes] =
         await Promise.allSettled([
             fetchHaokaProducts(),
             fetchLotMLProducts(),
@@ -292,6 +317,7 @@ export default async function SearchPage() {
             fetchKsjProducts(),
             fetchYkyProducts(),
             fetchGongchuangProducts(),
+            fetchGantanhaoProducts(),
         ]);
 
     /** 逐平台映射为 UnifiedProduct，失败平台跳过并收集错误信息 */
@@ -346,6 +372,14 @@ export default async function SearchPage() {
         console.error("[Search] 共创号卡数据加载失败:", gongchuangRes.reason);
     }
 
+    /* ===== 卡业联盟 ===== */
+    if (gantanhaoRes.status === "fulfilled") {
+        products.push(...gantanhaoRes.value.products.map(mapGantanhao));
+    } else {
+        errors.push("卡业联盟");
+        console.error("[Search] 卡业联盟数据加载失败:", gantanhaoRes.reason);
+    }
+
     /* ========== 生成随机种子（SSR 一致性关键） ========== */
 
     /** 随机种子 — 服务端生成，客户端水合时使用同一序列 */
@@ -361,7 +395,7 @@ export default async function SearchPage() {
         "@context": "https://schema.org",
         "@type": "CollectionPage",
         "name": "2026流量卡搜索对比",
-        "description": "聚合6大平台1000+款流量卡套餐，支持按运营商、价格、流量、时长多维筛选对比",
+        "description": "聚合7大平台1000+款流量卡套餐，支持按运营商、价格、流量、时长多维筛选对比",
         "url": `${siteUrl}/search`,
         "isPartOf": { "@type": "WebSite", "name": "号卡之家", "url": siteUrl },
         "potentialAction": {

@@ -8,7 +8,7 @@
 /* ========== 平台标识 ========== */
 
 /** 平台标识 */
-export type PlatformKey = "haoka" | "lotml" | "linxi" | "ksj" | "yky" | "gongchuang";
+export type PlatformKey = "haoka" | "lotml" | "linxi" | "ksj" | "yky" | "gongchuang" | "gantanhao";
 
 /* ========== 统一运营商 ========== */
 
