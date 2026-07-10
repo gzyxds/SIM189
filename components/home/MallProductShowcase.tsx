@@ -70,11 +70,6 @@ interface OperatorTab {
   icon?: LucideIcon;
 }
 
-/** 轮播 Banner 配置 */
-interface BannerItem {
-  imageSrc: string;
-}
-
 /** 快捷入口配置 */
 interface QuickEntryItem {
   icon: LucideIcon;
@@ -115,12 +110,12 @@ const OPERATOR_TABS: OperatorTab[] = [
   { key: "broadcast", label: "广电专区" },
 ];
 
-/** 轮播 Banner 图片列表 */
-const BANNERS: BannerItem[] = [
-  { imageSrc: "/HeroSection/hero.jpg" },
-  { imageSrc: "/HeroSection/hero-3.png" },
-  { imageSrc: "/HeroSection/hero-4.png" },
-];
+/** 轮播 Banner 图片路径列表 */
+const BANNER_IMAGES = [
+  "/HeroSection/hero.jpg",
+  "/HeroSection/hero-3.png",
+  "/HeroSection/hero-4.png",
+] as const;
 
 /** 快捷入口卡片配置 */
 const QUICK_ENTRIES: QuickEntryItem[] = [
@@ -297,9 +292,13 @@ async function fetchMallProductsWithRetry(
       ]);
 
       /* 服务端返回业务错误时，也进行重试 */
-      if (result.error && attempt < retries) {
-        lastError = new Error(result.error);
-        continue;
+      if (result.error) {
+        if (attempt < retries) {
+          lastError = new Error(result.error);
+          continue;
+        }
+        /* 最后一次重试仍然失败，统一抛出异常 */
+        throw new Error(result.error);
       }
 
       return result;
@@ -369,7 +368,14 @@ function usePrefersReducedMotion(): boolean {
  * 骨架屏组件
  * ================================================================== */
 
-/** 商品卡片骨架屏 */
+/**
+ * 商品卡片骨架屏。
+ *
+ * 模拟真实商品卡片的视觉结构（图片区 + 标签 + 标题 + 价格 + 按钮），
+ * 保持与正式布局一致的骨架结构，减少加载前后视觉跳动。
+ *
+ * @returns 骨架屏节点
+ */
 function ProductCardSkeleton() {
   return (
     <div className="flex flex-col overflow-hidden rounded-md border border-gray-100 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900">
@@ -430,7 +436,14 @@ function ProductImageFrame({
   );
 }
 
-/** 热销榜单项骨架屏 */
+/**
+ * 热销榜单单项骨架屏。
+ *
+ * 模拟侧边栏榜单行结构（编号 + 缩略图 + 标题 + 价格），
+ * 在热销榜数据加载期间提供平滑的加载过渡。
+ *
+ * @returns 骨架屏节点
+ */
 function RankingItemSkeleton() {
   return (
     <div className="flex items-center gap-3 rounded-md border border-gray-100 bg-white px-3 py-2.5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
@@ -467,7 +480,7 @@ function PromoCarousel() {
     if (prefersReducedMotion) return;
 
     const timer = window.setInterval(() => {
-      setCurrent((prev) => (prev + 1) % BANNERS.length);
+      setCurrent((prev) => (prev + 1) % BANNER_IMAGES.length);
     }, CAROUSEL_INTERVAL_MS);
 
     return () => window.clearInterval(timer);
@@ -486,10 +499,10 @@ function PromoCarousel() {
     if (Math.abs(diff) > SWIPE_THRESHOLD) {
       if (diff > 0) {
         /* 左滑 → 下一张 */
-        setCurrent((prev) => (prev + 1) % BANNERS.length);
+        setCurrent((prev) => (prev + 1) % BANNER_IMAGES.length);
       } else {
         /* 右滑 → 上一张 */
-        setCurrent((prev) => (prev - 1 + BANNERS.length) % BANNERS.length);
+        setCurrent((prev) => (prev - 1 + BANNER_IMAGES.length) % BANNER_IMAGES.length);
       }
     }
   }
@@ -503,32 +516,32 @@ function PromoCarousel() {
       aria-label="商城促销轮播图"
       aria-roledescription="carousel"
     >
-      {BANNERS.map((banner, index) => (
+      {BANNER_IMAGES.map((imageSrc, index) => (
         <div
-          key={banner.imageSrc}
+          key={imageSrc}
           className={cn(
             "absolute inset-0 transition-opacity duration-700",
             current === index ? "opacity-100" : "pointer-events-none opacity-0"
           )}
           role="group"
           aria-roledescription="slide"
-          aria-label={`第 ${index + 1} 张，共 ${BANNERS.length} 张`}
+          aria-label={`第 ${index + 1} 张，共 ${BANNER_IMAGES.length} 张`}
           aria-hidden={current !== index}
         >
           <Image
-            src={banner.imageSrc}
-            alt="商城促销轮播图"
+            src={imageSrc}
+            alt={`商城促销轮播图 ${index + 1}`}
             fill
             sizes="(max-width: 1024px) 100vw, 50vw"
             className="object-cover"
-            priority={index === 0}
+            loading="eager"
           />
         </div>
       ))}
 
       {/* 轮播指示器：移动端加大触控面积 */}
       <div className="absolute bottom-3 left-1/2 z-20 flex -translate-x-1/2 gap-2 sm:bottom-4 sm:gap-1.5">
-        {BANNERS.map((_, index) => (
+        {BANNER_IMAGES.map((_, index) => (
           <button
             key={index}
             type="button"
@@ -551,10 +564,19 @@ function PromoCarousel() {
  * 快捷入口组件
  * ================================================================== */
 
-/** 左侧快捷入口卡片 */
+/**
+ * 左侧快捷入口卡片。
+ *
+ * 使用图标 + 标题 + 描述的组合呈现入口信息，
+ * 悬停时微上浮 + 阴影增强，点击时缩放反馈。
+ *
+ * @param props - 组件参数
+ * @param props.item - 快捷入口配置项
+ * @returns 快捷入口卡片节点
+ */
 function QuickEntryCard({ item }: { item: QuickEntryItem }) {
   return (
-    <div className="group flex items-center gap-2.5 rounded-md border border-gray-100 bg-white px-3 py-2.5 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md active:scale-[0.98] dark:border-gray-800 dark:bg-gray-900 sm:gap-3 sm:py-3">
+    <div role="button" tabIndex={0} className="group flex items-center gap-2.5 rounded-md border border-gray-100 bg-white px-3 py-2.5 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md active:scale-[0.98] dark:border-gray-800 dark:bg-gray-900 sm:gap-3 sm:py-3 focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:outline-hidden">
       <div
         className={cn(
           "flex size-9 shrink-0 items-center justify-center rounded-md transition-transform duration-300 group-hover:scale-105 sm:size-10",
