@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { SITE_WIDTH_STYLE, containerClass } from "@/lib/layout";
+import { cn } from "@/lib/utils";
 import {
   Menu,
   X,
@@ -61,6 +62,10 @@ interface NavItem {
   icon?: React.ElementType;
   /** 移动端图标颜色与背景类 */
   iconColor?: string;
+  /** 移动端下拉菜单标题图标 */
+  dropdownIcon?: React.ElementType;
+  /** 移动端下拉菜单标题图标颜色类 */
+  dropdownIconColor?: string;
 }
 
 /** PC 端右侧 CTA 按钮配置 */
@@ -78,6 +83,8 @@ const NAV_ITEMS: NavItem[] = [
   {
     label: "号卡办理",
     dropdownTitle: "选择号卡平台",
+    dropdownIcon: CreditCard,
+    dropdownIconColor: "text-blue-500",
     children: [
       {
         label: "172号卡",
@@ -142,6 +149,8 @@ const NAV_ITEMS: NavItem[] = [
   {
     label: "合作产品",
     dropdownTitle: "生态合作产品",
+    dropdownIcon: Building2,
+    dropdownIconColor: "text-blue-500",
     children: [
       {
         label: "艺创官网",
@@ -292,10 +301,16 @@ function DropdownMenu({
  */
 function MobileDropdownMenu({
   label,
+  icon: Icon = BadgeCheck,
+  iconClassName = "text-blue-500",
   children,
   onClose,
 }: {
   label: string;
+  /** 标题图标组件 */
+  icon?: React.ElementType;
+  /** 标题图标颜色类 */
+  iconClassName?: string;
   children: SubNavItem[];
   onClose: () => void;
 }) {
@@ -308,19 +323,24 @@ function MobileDropdownMenu({
         type="button"
         onClick={() => setOpen(!open)}
         className="flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+        aria-expanded={open}
       >
         <span className="flex items-center gap-2">
-          <BadgeCheck className="size-4 text-blue-500" />
+          <Icon className={`size-4 ${iconClassName}`} />
           {label}
         </span>
         <ChevronDown
-          className={`size-4 text-slate-400 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+          className={cn("size-4 text-slate-400 transition-transform duration-200", open && "rotate-180")}
         />
       </button>
 
       {/* 双排网格子菜单内容 */}
-      {open && (
-        <div className="mb-2 mt-1 grid grid-cols-2 gap-1.5 px-1">
+      <div
+        className={cn(
+          "grid grid-cols-2 gap-1.5 overflow-hidden px-1 transition-all duration-300 ease-out",
+          open ? "mb-2 mt-1 max-h-[600px] opacity-100" : "max-h-0 opacity-0"
+        )}
+      >
           {children.map((item) => (
             <Link
               key={item.href}
@@ -352,8 +372,7 @@ function MobileDropdownMenu({
               </div>
             </Link>
           ))}
-        </div>
-      )}
+      </div>
     </div>
   );
 }
@@ -421,6 +440,98 @@ export default function Header() {
   /** 关闭移动端菜单的快捷函数 */
   const closeMobile = () => setMobileOpen(false);
 
+  /** 按语义获取登入/注册按钮配置，避免数组索引硬编码 */
+  const loginBtn = CTA_BUTTONS.find((b) => b.label === "登入")!;
+  const registerBtn = CTA_BUTTONS.find((b) => b.label === "注册")!;
+
+  /** 移动端菜单打开时锁定背景页面滚动 */
+  useEffect(() => {
+    if (mobileOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => { document.body.style.overflow = ""; };
+  }, [mobileOpen]);
+
+  /** Escape 键关闭移动端菜单 */
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMobileOpen(false);
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [mobileOpen]);
+
+  /**
+   * 渲染移动端导航项列表（普通链接 + 下拉菜单混合布局）。
+   *
+   * 将连续的普通导航链接批量放入双排网格，子菜单组全宽展开。
+   *
+   * @param closeMobile - 关闭移动端菜单的回调
+   * @returns 导航项 React 节点数组
+   */
+  const renderMobileNavItems = (closeMobile: () => void): React.ReactNode[] => {
+    const result: React.ReactNode[] = [];
+    let plainBatch: NavItem[] = [];
+
+    const flushBatch = () => {
+      if (plainBatch.length === 0) return;
+      const batch = plainBatch;
+      if (batch.length === 1) {
+        result.push(
+          <MobileNavLink
+            key={batch[0].label}
+            label={batch[0].label}
+            href={batch[0].href!}
+            icon={batch[0].icon}
+            iconColor={batch[0].iconColor}
+            onClose={closeMobile}
+          />
+        );
+      } else {
+        result.push(
+          <div key={`plain-${batch[0].label}`} className="grid grid-cols-2 gap-1.5">
+            {batch.map((item) => (
+              <MobileNavLink
+                key={item.label}
+                label={item.label}
+                href={item.href!}
+                icon={item.icon}
+                iconColor={item.iconColor}
+                onClose={closeMobile}
+              />
+            ))}
+          </div>
+        );
+      }
+      plainBatch = [];
+    };
+
+    NAV_ITEMS.forEach((item) => {
+      if (item.children) {
+        flushBatch();
+        result.push(
+          <MobileDropdownMenu
+            key={item.label}
+            label={item.label}
+            icon={item.dropdownIcon}
+            iconClassName={item.dropdownIconColor}
+            // eslint-disable-next-line react/no-children-prop
+            children={item.children}
+            onClose={closeMobile}
+          />
+        );
+      } else {
+        plainBatch.push(item);
+      }
+    });
+    flushBatch();
+
+    return result;
+  };
+
   return (
     <header
       ref={headerRef}
@@ -480,7 +591,7 @@ export default function Header() {
         <div className="flex items-center gap-2 sm:gap-3">
           {/* 桌面端：登入按钮（描边样式） */}
           <a
-            href={CTA_BUTTONS[0].href}
+            href={loginBtn.href}
             target="_blank"
             rel="noopener noreferrer"
             className="hidden items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-sm font-medium text-slate-700 transition-all hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 md:inline-flex lg:px-3.5 lg:py-2 lg:text-base"
@@ -490,7 +601,7 @@ export default function Header() {
           </a>
           {/* 桌面端：注册按钮（实心样式） */}
           <a
-            href={CTA_BUTTONS[1].href}
+            href={registerBtn.href}
             target="_blank"
             rel="noopener noreferrer"
             className="hidden items-center gap-1.5 rounded-md bg-blue-600 px-2.5 py-1.5 text-sm font-medium text-white transition-all hover:bg-blue-700 hover:-translate-y-0.5 md:inline-flex lg:px-3.5 lg:py-2 lg:text-base"
@@ -505,6 +616,7 @@ export default function Header() {
             onClick={() => setMobileOpen(!mobileOpen)}
             aria-label="切换菜单"
             aria-expanded={mobileOpen}
+            aria-controls="mobile-menu-panel"
           >
             {mobileOpen ? <X className="size-5" /> : <Menu className="size-5" />}
           </button>
@@ -513,7 +625,7 @@ export default function Header() {
 
       {/* ── 移动端展开菜单 ── */}
       {mobileOpen && (
-        <div className="max-h-[calc(100dvh-4rem)] overflow-y-auto border-t border-slate-200/60 bg-white md:hidden">
+        <div id="mobile-menu-panel" className="max-h-[calc(100dvh-4rem)] overflow-y-auto border-t border-slate-200/60 bg-white md:hidden">
           {/* ── 导航链接区：按 PC 端顺序混排，双排网格 ── */}
           <div className="px-4 pt-3">
             {/* 分节标题 */}
@@ -525,65 +637,7 @@ export default function Header() {
 
             <div className="space-y-1">
               {/* 按 NAV_ITEMS 原始顺序渲染：普通链接双排，子菜单组全宽展开 */}
-              {(() => {
-                /** 收集连续的普通链接，批量渲染为一组双排网格 */
-                const result: React.ReactNode[] = [];
-                let plainBatch: NavItem[] = [];
-
-                const flushBatch = () => {
-                  if (plainBatch.length === 0) return;
-                  const batch = plainBatch;
-                  /** 单项时全宽铺满，多项时双排网格 */
-                  if (batch.length === 1) {
-                    result.push(
-                      <MobileNavLink
-                        key={batch[0].label}
-                        label={batch[0].label}
-                        href={batch[0].href!}
-                        icon={batch[0].icon}
-                        iconColor={batch[0].iconColor}
-                        onClose={closeMobile}
-                      />
-                    );
-                  } else {
-                    result.push(
-                      <div key={`plain-${batch[0].label}`} className="grid grid-cols-2 gap-1.5">
-                        {batch.map((item) => (
-                          <MobileNavLink
-                            key={item.label}
-                            label={item.label}
-                            href={item.href!}
-                            icon={item.icon}
-                            iconColor={item.iconColor}
-                            onClose={closeMobile}
-                          />
-                        ))}
-                      </div>
-                    );
-                  }
-                  plainBatch = [];
-                };
-
-                NAV_ITEMS.forEach((item) => {
-                  if (item.children) {
-                    flushBatch();
-                    result.push(
-                      <MobileDropdownMenu
-                        key={item.label}
-                        label={item.label}
-                        // eslint-disable-next-line react/no-children-prop
-                        children={item.children}
-                        onClose={closeMobile}
-                      />
-                    );
-                  } else {
-                    plainBatch.push(item);
-                  }
-                });
-                flushBatch();
-
-                return result;
-              })()}
+              {renderMobileNavItems(closeMobile)}
             </div>
           </div>
 
@@ -601,7 +655,7 @@ export default function Header() {
             {/* 登入 & 注册：双排并列 */}
             <div className="grid grid-cols-2 gap-2">
               <a
-                href={CTA_BUTTONS[0].href}
+                href={loginBtn.href}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-2 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
@@ -610,7 +664,7 @@ export default function Header() {
                 登入
               </a>
               <a
-                href={CTA_BUTTONS[1].href}
+                href={registerBtn.href}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-2 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"

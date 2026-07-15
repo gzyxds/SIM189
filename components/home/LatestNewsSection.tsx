@@ -30,7 +30,7 @@ function LatestNewsCard({ article }: { article: NewsArticle }) {
     const reads = article.wordCount;
 
     return (
-        <article className="group flex flex-col overflow-hidden rounded-2xl border border-gray-200/60 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04),0_4px_12px_rgba(0,0,0,0.03)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg dark:border-gray-800 dark:bg-gray-900">
+        <article className="group relative flex flex-col overflow-hidden rounded-2xl border border-gray-200/60 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04),0_4px_12px_rgba(0,0,0,0.03)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg dark:border-gray-800 dark:bg-gray-900">
             {/* ===== 封面图 ===== */}
             <Link href={`/news/${article.id}`} className="relative block overflow-hidden">
                 <div className="aspect-video w-full">

@@ -43,6 +43,8 @@ import {
   Receipt,
   RefreshCw,
   TrendingUp,
+  Megaphone,
+  Wrench,
 } from "lucide-react";
 
 /* ========== 轮播图配置 ========== */
@@ -119,8 +121,8 @@ const LEFT_MENU: LeftMenuItem[] = [
   },
   {
     icon: CreditCard,
-    title: "浩卡联盟",
-    subtitle: "号卡精选商城",
+    title: "号卡精选",
+    subtitle: "浩卡联盟·品质保障",
     href: "/haoka",
     children: [
       { icon: Globe, label: "在线办理", href: "/haoka", isExternal: false },
@@ -131,8 +133,8 @@ const LEFT_MENU: LeftMenuItem[] = [
   },
   {
     icon: Wifi,
-    title: "林夕号卡",
-    subtitle: "万千号卡 尽在林夕",
+    title: "林夕通信",
+    subtitle: "万千号卡·尽在林夕",
     href: "/linxi",
     children: [
       { icon: Globe, label: "在线办理", href: "/linxi", isExternal: false },
@@ -166,6 +168,27 @@ const LEFT_MENU: LeftMenuItem[] = [
       { icon: UserPlus, label: "代理申请", href: "https://haoka.kakatx.com/register?inviteCode=ZKG58800", isExternal: true },
       { icon: LogIn, label: "登入后台", href: "https://haoka.kakatx.com/index", isExternal: true },
       { icon: ClipboardList, label: "订单查询", href: "https://haoka.kakatx.com/web/#/pages/order/index1", isExternal: true },
+    ],
+  },
+  {
+    icon: Signal,
+    title: "卡世界号卡",
+    subtitle: "精选套餐·号卡大全",
+    href: "/ksj",
+    children: [
+      { icon: Globe, label: "在线办理", href: "/ksj", isExternal: false },
+      { icon: Store, label: "号卡商城", href: "https://ym.ksjhaoka.com/?s=1sLLMhzr642829", isExternal: true },
+      { icon: ClipboardList, label: "订单查询", href: "https://ym.ksjhaoka.com/", isExternal: true },
+    ],
+  },
+  {
+    icon: Megaphone,
+    title: "卡业联盟",
+    subtitle: "感叹号联盟·正规大流量卡",
+    href: "/gantanhao",
+    children: [
+      { icon: Globe, label: "在线办理", href: "/gantanhao", isExternal: false },
+      { icon: Store, label: "号卡商城", href: "https://gantanhao.com/", isExternal: true },
     ],
   },
   { icon: Package, title: "生活优惠", subtitle: "外卖红包、打车券、电影票折扣", href: "/cps" },
@@ -227,6 +250,13 @@ const RIGHT_LINKS = [
     subtitle: "代理商管理系统",
     href: "https://www.haokavip.com/page.html#/register?code=1698006",
     isExternal: true,
+  },
+  {
+    icon: Wrench,
+    label: "自助服务",
+    subtitle: "一站直达·快捷服务",
+    href: "/services",
+    isExternal: false,
   },
   {
     icon: MessageCircle,
@@ -523,7 +553,7 @@ export default function HeroSection() {
                       <Link
                         href={item.href}
                         className={[
-                          "flex h-full items-center gap-2.5 px-3.5 transition-colors lg:gap-3 lg:px-4",
+                          "flex items-center gap-3 px-3.5 py-1.5 transition-colors lg:gap-3.5 lg:px-4 lg:py-2",
                           isActive ? "bg-blue-50/80" : "hover:bg-blue-50/70",
                         ].join(" ")}
                       >
@@ -535,7 +565,7 @@ export default function HeroSection() {
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="text-xs font-normal lg:text-sm">{item.title}</p>
-                          <p className="hidden truncate text-[11px] text-muted-foreground lg:block">
+                          <p className="hidden truncate text-[11px] text-muted-foreground md:block">
                             {item.subtitle}
                           </p>
                         </div>
@@ -660,7 +690,7 @@ export default function HeroSection() {
             {/* 轮播图，最大高度 280px（原 320px）使三栏整体更紧凑 */}
             <div
               className="relative overflow-hidden rounded-md flex-1"
-              style={{ minHeight: "clamp(160px, 28vw, 280px)" }}
+              style={{ minHeight: "clamp(200px, 32vw, 380px)" }}
               onTouchStart={handleTouchStart}
               onTouchEnd={handleTouchEnd}
               onMouseEnter={stopAutoPlay}
