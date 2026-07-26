@@ -5,8 +5,8 @@
  * 修改此处即可全局统一商品卡片的展示样式。
  *
  * 设计要点：
- * - 卡片微投影 + 悬停上浮，营造层次感
- * - 运营商色系贯穿标签/徽章，快速识别品牌
+ * - 移动端水平布局（图左文右），省空间且易于扫读
+ * - 桌面端垂直布局（图上文下），4 列等高卡片
  * - 圆角药丸标签提升可读性与美观度
  * - 完整暗色模式适配，夜间浏览不刺眼
  */
@@ -21,9 +21,7 @@ import { Eye, ChevronRight, Star } from "lucide-react";
 /* ========== 商品标签 ========== */
 
 interface ProductTagsProps {
-  /** 预计算标签列表（优先使用，避免客户端解析） */
   tags: { text: string; className: string }[];
-  /** 最多显示数量 */
   max?: number;
 }
 
@@ -36,7 +34,7 @@ export function ProductTags({ tags, max }: ProductTagsProps) {
       {displayTags.map((tag, i) => (
         <span
           key={i}
-          className={`inline-block rounded-full border px-2 py-px text-[10px] leading-relaxed font-medium ${tag.className}`}
+          className={`inline-block rounded-full border px-1.5 sm:px-2 py-px text-[9px] sm:text-[10px] leading-relaxed font-medium ${tag.className}`}
         >
           {tag.text}
         </span>
@@ -77,7 +75,7 @@ interface ProductCardProps {
   provider?: Operator;
 }
 
-/** 商品卡片（含图片/标签/价格/按钮，完整暗色模式适配） */
+/** 商品卡片（移动端图左文右 / 桌面端图上文下，完整暗色模式适配） */
 export default function ProductCard({ product, provider }: ProductCardProps) {
   const prov = provider || mapOperator(product.product_name);
   const price = product.product_name.match(/(\d+\.?\d*)元/)?.[1] || "?";
@@ -86,30 +84,29 @@ export default function ProductCard({ product, provider }: ProductCardProps) {
 
   return (
     <div
-      className="group flex flex-col overflow-hidden rounded-lg border border-gray-200/60 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04),0_4px_12px_rgba(0,0,0,0.03)] transition-all duration-300 hover:-translate-y-1 hover:border-gray-300/80 hover:shadow-[0_4px_16px_rgba(0,0,0,0.08),0_8px_28px_rgba(0,0,0,0.04)] dark:border-gray-800 dark:bg-gray-900 dark:shadow-[0_1px_3px_rgba(0,0,0,0.2),0_4px_12px_rgba(0,0,0,0.15)] dark:hover:border-gray-700 dark:hover:shadow-[0_4px_20px_rgba(0,0,0,0.4)]"
+      className="group flex flex-row overflow-hidden rounded-lg border border-gray-200/60 bg-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-gray-300/80 hover:shadow-md dark:border-gray-800 dark:bg-gray-900 dark:hover:border-gray-700 dark:hover:shadow-md sm:flex-col"
       data-provider={prov}
     >
       {/* ===== 图片区域 ===== */}
-      <Link href={`/haoka/${product.product_id}`} className="block">
+      <Link
+        href={`/haoka/${product.product_id}`}
+        className="block shrink-0 w-[130px] sm:w-full"
+      >
         {product.product_image ? (
-          <div className="relative aspect-square w-full overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100/50 dark:from-gray-800 dark:to-gray-800/60 p-2 sm:p-3">
+          <div className="relative aspect-square w-full overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100/50 dark:from-gray-800 dark:to-gray-800/60">
             <img
               src={product.product_image}
               alt={product.product_name}
-              className="h-full w-full rounded-lg object-cover transition-transform duration-500 group-hover:scale-105"
+              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
               loading="lazy"
             />
-            {/* 底部渐变遮罩 — 为推荐角标提供对比 */}
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-12 rounded-b-lg bg-gradient-to-t from-black/10 to-transparent" />
-            {/* 推荐角标 */}
             {isTop && (
-              <span className="absolute left-0 top-0 inline-flex items-center gap-1 rounded-br-lg bg-gradient-to-r from-amber-500 to-orange-500 px-2 py-1 text-[10px] font-bold text-white shadow-md sm:rounded-br-xl sm:px-3 sm:py-1.5 sm:text-[11px]">
-                <Star className="size-3 fill-white" /> 推荐
+              <span className="absolute left-0 top-0 inline-flex items-center gap-1 rounded-br-lg bg-gradient-to-r from-amber-500 to-orange-500 px-1.5 py-0.5 text-[9px] font-bold text-white shadow-md sm:rounded-br-xl sm:px-3 sm:py-1.5 sm:text-[11px]">
+                <Star className="size-2.5 sm:size-3 fill-white" /> 推荐
               </span>
             )}
           </div>
         ) : (
-          /* 无图片占位 */
           <div className="flex aspect-square w-full items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-800/60">
             <span className="text-xs text-gray-400 dark:text-gray-600">暂无图片</span>
           </div>
@@ -117,61 +114,56 @@ export default function ProductCard({ product, provider }: ProductCardProps) {
       </Link>
 
       {/* ===== 内容区域 ===== */}
-      <div className="flex flex-1 flex-col p-3 sm:p-4">
-        <Link href={`/haoka/${product.product_id}`} className="flex-1">
+      <div className="flex flex-1 flex-col p-2.5 sm:p-3 min-w-0">
+        <Link href={`/haoka/${product.product_id}`} className="flex flex-col gap-1 sm:gap-1.5">
           {/* 运营商标签 */}
-          <div className="mb-2 sm:mb-2.5 flex items-center gap-1.5">
-            <span
-              className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-semibold sm:px-2.5 sm:text-[11px] ${opStyle.badge}`}
-            >
-              <span className={`inline-block size-1.5 rounded-full ${opStyle.dot}`} />
-              {OPERATOR_LABEL[prov]}
-            </span>
-          </div>
+          <span
+            className={`inline-flex w-fit items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] font-semibold sm:px-2 sm:text-[10px] ${opStyle.badge}`}
+          >
+            <span className={`inline-block size-1.5 rounded-full ${opStyle.dot}`} />
+            {OPERATOR_LABEL[prov]}
+          </span>
 
           {/* 标题 */}
-          <h3 className="mb-1.5 sm:mb-2 line-clamp-2 text-xs sm:text-sm font-semibold leading-snug text-gray-900 dark:text-gray-100">
+          <h3 className="line-clamp-2 text-[12px] sm:text-sm font-semibold leading-snug text-gray-900 dark:text-gray-100">
             {product.product_name.replace(/【.*?】/g, "").trim()}
           </h3>
 
           {/* 价格 */}
-          <div className="mb-2 sm:mb-3 flex items-baseline gap-0.5">
-            <span className="text-xl sm:text-[28px] font-extrabold leading-none tracking-tight text-blue-600 dark:text-blue-400">
+          <div className="flex items-baseline gap-0.5">
+            <span className="text-base font-extrabold leading-none tracking-tight text-blue-600 dark:text-blue-400 sm:text-[26px]">
               ¥{price}
             </span>
-            <span className="text-xs text-gray-400 dark:text-gray-500">/月</span>
+            <span className="text-[10px] text-gray-400 dark:text-gray-500 sm:text-xs">/月</span>
           </div>
 
-          {/* 标签（使用预计算数据，避免客户端解析） */}
+          {/* 标签 */}
           <ProductTags
             tags={(product as HaokaProductWithMeta)._tags}
-            max={4}
+            max={3}
           />
         </Link>
 
-        {/* 分隔线 */}
-        <div className="my-2 sm:my-3 border-t border-gray-100 dark:border-gray-800" />
-
         {/* ===== 操作按钮 ===== */}
-        <div className="flex gap-1.5 sm:gap-2">
+        <div className="mt-auto flex gap-1 pt-1.5 sm:pt-3 sm:border-t sm:border-gray-100 dark:sm:border-gray-800">
           <Button
             size="sm"
             variant="outline"
-            className="flex-1 text-xs border-gray-200 hover:border-gray-300 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:border-gray-600 dark:hover:bg-gray-800"
+            className="flex-1 h-7 sm:h-9 text-[10px] sm:text-xs border-gray-200 hover:border-gray-300 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:border-gray-600 dark:hover:bg-gray-800 px-1.5 sm:px-3"
             asChild
           >
             <Link href={`/haoka/${product.product_id}`}>
-              <Eye className="size-3.5" />
+              <Eye className="size-3 sm:size-3.5" />
               详情
             </Link>
           </Button>
           <Button
             size="sm"
-            className="flex-1 bg-blue-600 text-xs font-medium text-white shadow-sm hover:bg-blue-700 hover:shadow-md dark:bg-blue-600 dark:hover:bg-blue-500"
+            className="flex-1 h-7 sm:h-9 bg-blue-600 text-[10px] sm:text-xs font-medium text-white shadow-sm hover:bg-blue-700 hover:shadow-md dark:bg-blue-600 dark:hover:bg-blue-500"
             asChild
           >
             <a href={product.product_link} target="_blank" rel="noopener noreferrer">
-              立即办理 <ChevronRight className="size-3.5" />
+              办理<ChevronRight className="size-3 sm:size-3.5" />
             </a>
           </Button>
         </div>
