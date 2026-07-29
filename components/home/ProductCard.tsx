@@ -130,7 +130,7 @@ export default function ProductCard({ product, provider }: ProductCardProps) {
               <span className={`inline-block size-1.5 rounded-full ${opStyle.dot}`} />
               {OPERATOR_LABEL[prov]}
             </span>
-            {(product as Record<string, unknown>).commition_price && (
+            {!!(product as Record<string, unknown>).commition_price && (
               <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-rose-50 px-1.5 py-0.5 text-[8px] font-medium text-rose-600 dark:bg-rose-950/30 dark:text-rose-400 sm:px-2 sm:text-[9px]">
                 <TrendingUp className="size-2.5 sm:size-3" />
                 高佣
