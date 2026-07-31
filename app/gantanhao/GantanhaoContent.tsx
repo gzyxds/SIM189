@@ -21,7 +21,6 @@ import { GANTANHAO_OPERATOR_LABEL, GANTANHAO_SHOP_URL } from "@/lib/api/gantanha
 import Header from "@/components/home/Header";
 import Footer from "@/components/home/Footer";
 import { SITE_WIDTH_STYLE, containerClass } from "@/lib/layout";
-import { Button } from "@/components/ui/button";
 import {
     Signal,
     ArrowRight,
@@ -30,10 +29,14 @@ import {
     TrendingUp,
     MapPin,
     RefreshCw,
-    Eye,
-    ChevronRight,
-    Star,
+    FileText,
+    Flame,
+    Smartphone,
+    SatelliteDish,
+    Wifi,
+    Radio,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import ClaimTicker from "@/components/ClaimTicker";
 
 /* ========== 类型定义 ========== */
@@ -69,28 +72,17 @@ const DURATION_OPTIONS = [
 
 /* ========== 运营商配色 ========== */
 
-const OPERATOR_STYLE: Record<string, { badge: string; dot: string }> = {
-    mobile: {
-        badge: "bg-green-100 text-green-700 dark:bg-green-950/50 dark:text-green-400",
-        dot: "bg-green-500 dark:bg-green-400",
-    },
-    telecom: {
-        badge: "bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-400",
-        dot: "bg-blue-500 dark:bg-blue-400",
-    },
-    unicom: {
-        badge: "bg-orange-100 text-orange-700 dark:bg-orange-950/50 dark:text-orange-400",
-        dot: "bg-orange-500 dark:bg-orange-400",
-    },
-    broadcast: {
-        badge: "bg-purple-100 text-purple-700 dark:bg-purple-950/50 dark:text-purple-400",
-        dot: "bg-purple-500 dark:bg-purple-400",
-    },
-    unknown: {
-        badge: "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
-        dot: "bg-gray-400 dark:bg-gray-500",
-    },
+const OPERATOR_CARD_STYLE: Record<
+    string,
+    { label: string; text: string; border: string; bg: string; icon: LucideIcon }
+> = {
+    mobile: { label: "移动", text: "text-green-600", border: "border-green-200", bg: "bg-green-50", icon: Smartphone },
+    telecom: { label: "电信", text: "text-blue-600", border: "border-blue-200", bg: "bg-blue-50", icon: SatelliteDish },
+    unicom: { label: "联通", text: "text-orange-600", border: "border-orange-200", bg: "bg-orange-50", icon: Wifi },
+    broadcast: { label: "广电", text: "text-purple-600", border: "border-purple-200", bg: "bg-purple-50", icon: Radio },
+    unknown: { label: "其他", text: "text-gray-600", border: "border-gray-200", bg: "bg-gray-50", icon: Signal },
 };
+
 
 /* ========== 页面顶栏优势 ========== */
 
@@ -222,10 +214,10 @@ function FilterBar({
     );
 }
 
-/* ========== 卡业联盟商品卡片 ========== */
+/* ========== 卡业联盟商品卡片（参考卡易卡片设计） ========== */
 
-/** 商品标签列表（圆角药丸样式） */
-function GantanhaoProductTags({
+/** 特色标签渲染（按文本类型着色） */
+function GantanhaoFeatureTags({
     tags,
     max = 4,
 }: {
@@ -234,12 +226,25 @@ function GantanhaoProductTags({
 }) {
     const displayTags = tags.slice(0, max);
     if (displayTags.length === 0) return null;
+
+    /** 根据文本内容选择颜色 */
+    const getColorByText = (text: string): string => {
+        if (text.includes("流量")) return "bg-blue-50 text-blue-600 border-blue-200";
+        if (text.includes("通话")) return "bg-orange-50 text-orange-600 border-orange-200";
+        if (text.includes("定向")) return "bg-purple-50 text-purple-600 border-purple-200";
+        if (text.includes("长期")) return "bg-green-50 text-green-600 border-green-200";
+        if (text.includes("不限") || text.includes("全国")) return "bg-teal-50 text-teal-600 border-teal-200";
+        if (text.includes("秒返")) return "bg-red-50 text-red-600 border-red-200";
+        if (text.includes("选号")) return "bg-cyan-50 text-cyan-600 border-cyan-200";
+        return "bg-gray-50 text-gray-600 border-gray-200";
+    };
+
     return (
-        <div className="flex flex-wrap gap-0.5 sm:gap-1">
-            {displayTags.map((tag, i) => (
+        <div className="flex flex-wrap gap-1.5">
+            {displayTags.map((tag) => (
                 <span
-                    key={i}
-                    className={`inline-block rounded-full border px-2 py-px text-[10px] leading-relaxed font-medium ${tag.className}`}
+                    key={tag.text}
+                    className={`inline-flex items-center gap-0.5 rounded-full border px-2 py-0.5 text-xs font-medium ${getColorByText(tag.text)}`}
                 >
                     {tag.text}
                 </span>
@@ -249,127 +254,256 @@ function GantanhaoProductTags({
 }
 
 /**
- * 卡业联盟商品卡片
+ * 卡业联盟商品卡片（参考卡易号卡卡片设计）
  *
- * 针对卡业联盟数据结构定制的商品卡片组件：
- * - 封面图（img 字段）
- * - 运营商色系标签（_provider 预计算）
- * - 月租价格（_price 预计算）
- * - 佣金展示（commission 字段）
- * - 标签列表（_tags 预计算）
+ * 移动端：紧凑布局（运营商角标 + 图左文右 + 四列参数条 + 操作栏）
+ * PC 端：横向宽卡片（左图右内容 + 参数条 + 条件标签 + 特色标签 + 按钮）
+ * 亮点：秒返/热销角标、运营商图标标签、发货率展示
  */
-function GantanhaoProductCard({ product }: { product: GantanhaoProductWithMeta }) {
-    const prov = product._provider;
-    const opStyle = OPERATOR_STYLE[prov] || OPERATOR_STYLE.unknown;
-    const price = product._price || "?";
-    // 是否秒返
+function GantanhaoProductCard({
+    product,
+    index,
+}: {
+    product: GantanhaoProductWithMeta;
+    index: number;
+}) {
+    const op = OPERATOR_CARD_STYLE[product._provider] || OPERATOR_CARD_STYLE.unknown;
+    const OpIcon = op.icon;
+
+    const price = product._price?.replace("元", "") || "?";
+    const flow = product._flow?.replace("G", "") || "0";
+    const voiceMatch = product.subName.match(/(\d+)\s*分钟/);
+    const voice = voiceMatch ? voiceMatch[1] : "按量";
+    const deliveryRate = product.deliveryRate || 0;
     const isMiaoFan = product.rebateType === 2;
+    const detailHref = `/gantanhao/${product.codeNumber}`;
+    const title = product.name.replace(/^\d+-/, "");
+    const hasImage = Boolean(product.img);
+
+    /* 蓝色套餐描述 */
+    const planDesc = `月租¥${price} · ${product._flow || "0"}通用${voice !== "按量" ? ` · ${voice}分钟通话` : ""}${product.deliveryMethod ? ` · ${product.deliveryMethod}包邮` : ""}`;
+
+    /* 四列固定参数 */
+    const specData: { value: string; unit: string; label: string; valueClass: string }[] = [
+        { value: price, unit: "元", label: "月租", valueClass: "text-red-500" },
+        { value: flow, unit: "G", label: "通用流量", valueClass: "text-gray-900" },
+        { value: voice, unit: voice !== "按量" ? "分钟" : "", label: "通话", valueClass: "text-gray-900" },
+        { value: String(deliveryRate), unit: "%", label: "发货率", valueClass: "text-gray-900" },
+    ];
 
     return (
-        <div className="group flex flex-col overflow-hidden rounded-lg border border-gray-200/60 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04),0_4px_12px_rgba(0,0,0,0.03)] transition-all duration-300 hover:-translate-y-1 hover:border-gray-300/80 hover:shadow-[0_4px_16px_rgba(0,0,0,0.08),0_8px_28px_rgba(0,0,0,0.04)] dark:border-gray-800 dark:bg-gray-900 dark:hover:border-gray-700">
-            {/* ===== 图片区域 ===== */}
-            <Link href={`/gantanhao/${product.codeNumber}`} className="block">
-                {product.img ? (
-                    <div className="relative aspect-square w-full overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100/50 p-2 sm:p-3">
-                        <img
-                            src={product.img}
-                            alt={product.name}
-                            className="h-full w-full rounded-lg object-cover transition-transform duration-500 group-hover:scale-105"
-                            loading="lazy"
-                        />
-                        {/* 秒返角标 */}
-                        {isMiaoFan && (
-                            <span className="absolute left-0 top-0 inline-flex items-center gap-1 rounded-br-lg bg-gradient-to-r from-amber-500 to-orange-500 px-2 py-1 text-[10px] font-bold text-white shadow-md sm:rounded-br-xl sm:px-3 sm:py-1.5 sm:text-[11px]">
-                                <Star className="size-3 fill-white" /> 秒返
-                            </span>
-                        )}
-                    </div>
-                ) : (
-                    /* 无图片占位 */
-                    <div className="flex aspect-square w-full items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
-                        <span className="text-xs text-gray-400">暂无图片</span>
-                    </div>
-                )}
-            </Link>
+        <article className="group relative overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-200 dark:bg-gray-900 dark:ring-gray-800">
+            {/* ===== 移动端布局（<sm）：紧凑结构 ===== */}
+            <div className="block sm:hidden">
+                <div className="p-3">
+                    {/* 运营商标签：右上角 */}
+                    <span className={`absolute right-3 top-3 z-10 flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium ${op.text} ${op.bg}`}>
+                        <OpIcon className="h-3.5 w-3.5" />
+                        {op.label}
+                    </span>
 
-            {/* ===== 内容区域 ===== */}
-            <div className="flex flex-1 flex-col p-3 sm:p-4">
-                <Link href={`/gantanhao/${product.codeNumber}`} className="flex-1">
-                    {/* 运营商标签 */}
-                    <div className="mb-2 flex items-center gap-1.5">
-                        <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-semibold sm:px-2.5 sm:text-[11px] ${opStyle.badge}`}>
-                            <span className={`inline-block size-1.5 rounded-full ${opStyle.dot}`} />
-                            {GANTANHAO_OPERATOR_LABEL[prov]}
+                    {/* 秒返/热销角标：左上角 */}
+                    {(isMiaoFan || index < 3) && (
+                        <span className={`absolute left-3 top-3 z-10 rounded-md px-2 py-0.5 text-xs font-bold text-white ${isMiaoFan ? "bg-gradient-to-r from-orange-500 to-red-500" : "bg-red-500"}`}>
+                            <Flame className="mr-1 inline-block h-3 w-3 fill-white" />
+                            {isMiaoFan ? "秒返" : "热销"}
                         </span>
-                        {/* 选号标签 */}
-                        {product.isSelectNumber === 1 && (
-                            <span className="rounded-full bg-cyan-50 px-2 py-0.5 text-[10px] font-semibold text-cyan-600">
-                                可选号
-                            </span>
-                        )}
-                    </div>
+                    )}
 
-                    {/* 标题（取 name 去除产品编码前缀） */}
-                    <h3 className="mb-1.5 line-clamp-2 text-xs font-semibold leading-snug text-gray-900 sm:mb-2 sm:text-sm">
-                        {product.name.replace(/^\d+-/, "")}
-                    </h3>
-
-                    {/* 副标题（简要套餐信息） */}
-                    <p className="mb-2 line-clamp-1 text-[11px] text-gray-400 sm:text-xs">
-                        {product.subName}
-                    </p>
-
-                    {/* 价格 + 佣金 */}
-                    <div className="mb-2 flex items-baseline gap-2 sm:mb-3">
-                        <div className="flex items-baseline gap-0.5">
-                            <span className="text-xl font-extrabold leading-none tracking-tight text-blue-600 sm:text-[28px]">
-                                ¥{price.replace("元", "")}
-                            </span>
-                            <span className="text-xs text-gray-400">/月</span>
-                        </div>
-                        {/* 佣金信息 */}
-                        {product.commission && (
-                            <span className="rounded-full bg-green-50 px-2 py-0.5 text-[10px] font-semibold text-green-600">
-                                佣金¥{product.commission}
-                            </span>
-                        )}
-                    </div>
-
-                    {/* 标签（使用预计算数据） */}
-                    <GantanhaoProductTags tags={product._tags} max={4} />
-                </Link>
-
-                {/* 分隔线 */}
-                <div className="my-2 border-t border-gray-100 sm:my-3" />
-
-                {/* ===== 操作按钮 ===== */}
-                <div className="flex gap-1.5 sm:gap-2">
-                    <Button
-                        size="sm"
-                        variant="outline"
-                        className="flex-1 border-gray-200 text-xs hover:border-gray-300 hover:bg-gray-50"
-                        asChild
-                    >
-                        <Link href={`/gantanhao/${product.codeNumber}`}>
-                            <Eye className="size-3.5" />
-                            详情
+                    {/* 图片 + 标题区 */}
+                    <div className="flex gap-3">
+                        <Link href={detailHref} className="relative h-[90px] w-[90px] shrink-0 overflow-hidden rounded-lg">
+                            {hasImage && (
+                                <img
+                                    src={product.img}
+                                    alt={product.name}
+                                    className="h-full w-full object-cover"
+                                    loading="lazy"
+                                />
+                            )}
                         </Link>
-                    </Button>
-                    <Button
-                        size="sm"
-                        className="flex-1 bg-blue-600 text-xs font-medium text-white shadow-sm hover:bg-blue-700 hover:shadow-md"
-                        asChild
-                    >
-                        <a href={product._orderUrl} target="_blank" rel="noopener noreferrer">
-                            立即办理 <ChevronRight className="size-3.5" />
-                        </a>
-                    </Button>
+                        <div className="min-w-0 flex-1">
+                            <h3 className="line-clamp-2 text-xs font-semibold leading-tight text-gray-900 dark:text-gray-100">
+                                <Link href={detailHref} className="hover:text-blue-600">
+                                    {title}
+                                </Link>
+                            </h3>
+                            <p className="mt-1 line-clamp-1 text-[13px] text-gray-600 dark:text-gray-400">
+                                {planDesc}
+                            </p>
+                            {/* 特色标签 */}
+                            <div className="mt-2">
+                                <GantanhaoFeatureTags tags={product._tags} max={4} />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* 四列参数条 */}
+                    <div className="mt-3 grid grid-cols-4 gap-1.5 rounded-lg bg-gray-50 p-2.5 dark:bg-gray-800">
+                        {specData.map((s) => (
+                            <div key={s.label} className="flex flex-col items-center">
+                                <span className={`text-sm font-bold ${s.valueClass}`}>
+                                    {s.value}
+                                    {s.unit && <span className="text-[10px] font-normal text-gray-400">{s.unit}</span>}
+                                </span>
+                                <span className="mt-0.5 text-[10px] text-gray-400">{s.label}</span>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* 操作栏 */}
+                    <div className="mt-3 flex items-center justify-between gap-2">
+                        <span className="inline-flex items-center gap-1 text-xs text-gray-500">
+                            <ShieldCheck className="h-3.5 w-3.5" />
+                            {product.ageLimit || "不限年龄"}
+                        </span>
+                        <div className="flex items-center gap-1.5">
+                            <Link
+                                href={detailHref}
+                                className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs font-normal text-gray-500 hover:border-blue-300 hover:text-blue-600 dark:border-gray-700 dark:text-gray-400 dark:hover:border-blue-400 dark:hover:text-blue-400"
+                            >
+                                <FileText className="h-3.5 w-3.5" />
+                                查看详情
+                            </Link>
+                            <a
+                                href={product._orderUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-normal text-white hover:bg-blue-700 active:scale-95"
+                            >
+                                立即办理
+                                <ArrowRight className="h-3.5 w-3.5" />
+                            </a>
+                        </div>
+                    </div>
+
+                    {/* 底部分割线 */}
+                    <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-2.5 text-[10px] text-gray-400 dark:border-gray-800">
+                        <span>{product._location}</span>
+                        {deliveryRate > 0 && (
+                            <span className="flex items-center gap-1">
+                                <RefreshCw className="h-3 w-3" />
+                                发货率{deliveryRate}%
+                            </span>
+                        )}
+                    </div>
                 </div>
             </div>
-        </div>
+
+            {/* ===== PC 端布局（≥sm）：左右结构 ===== */}
+            <div className="hidden sm:block">
+                <div className="flex flex-row">
+                    {/* 左侧图片区 */}
+                    <div className="relative w-5/12 shrink-0 lg:w-2/5">
+                        <Link href={detailHref} className="block bg-white p-3 dark:bg-gray-900">
+                            <div className="relative h-full overflow-hidden rounded-lg">
+                                {hasImage && (
+                                    <img
+                                        src={product.img}
+                                        alt={product.name}
+                                        className="h-full w-full object-cover"
+                                        loading="lazy"
+                                    />
+                                )}
+                            </div>
+                        </Link>
+                        {/* 秒返/热销角标 */}
+                        {(isMiaoFan || index < 3) && (
+                            <span className={`absolute left-3 top-3 z-10 rounded-md px-2 py-0.5 text-[10px] font-bold text-white ${isMiaoFan ? "bg-gradient-to-r from-orange-500 to-red-500" : "bg-red-500"}`}>
+                                <Flame className="mr-1 inline-block h-3 w-3 fill-white" />
+                                {isMiaoFan ? "秒返" : "热销"}
+                            </span>
+                        )}
+                        {/* 运营商标签 */}
+                        <span className={`absolute right-3 top-3 z-10 flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-medium ${op.text} ${op.bg}`}>
+                            <OpIcon className="h-3 w-3" />
+                            {op.label}
+                        </span>
+                    </div>
+
+                    {/* 右侧内容区 */}
+                    <div className="flex flex-1 flex-col p-4 xl:p-5">
+                        {/* 标题 + 发货率 */}
+                        <div className="mb-2 flex items-start justify-between gap-2">
+                            <h3 className="text-sm font-semibold text-gray-900 lg:text-base dark:text-gray-100">
+                                <Link href={detailHref} className="hover:text-blue-600">
+                                    {title}
+                                </Link>
+                            </h3>
+                            {deliveryRate > 0 && (
+                                <span className="shrink-0 whitespace-nowrap text-[10px] text-gray-400 lg:text-xs">
+                                    发货率 {deliveryRate}%
+                                </span>
+                            )}
+                        </div>
+
+                        {/* 套餐描述 */}
+                        <p className="mb-3 text-sm text-gray-600 dark:text-gray-400">
+                            {planDesc}
+                        </p>
+
+                        {/* 四列参数条 */}
+                        <div className="mb-3 grid grid-cols-4 gap-2 rounded-xl bg-gray-50 p-2.5 dark:bg-gray-800">
+                            {specData.map((s) => (
+                                <div key={s.label} className="flex flex-col items-center">
+                                    <span className={`text-sm font-bold lg:text-base ${s.valueClass}`}>
+                                        {s.value}
+                                        {s.unit && <span className="text-[10px] font-normal text-gray-400">{s.unit}</span>}
+                                    </span>
+                                    <span className="mt-0.5 text-[10px] text-gray-500 dark:text-gray-400">{s.label}</span>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* 条件标签 */}
+                        <div className="mb-2 flex flex-wrap gap-1.5">
+                            {product.ageLimit && (
+                                <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-600 dark:bg-green-500/20 dark:text-green-300">
+                                    <ShieldCheck className="h-3 w-3" />
+                                    {product.ageLimit}
+                                </span>
+                            )}
+                            <span className="inline-flex items-center gap-1 rounded-full bg-orange-50 px-2.5 py-0.5 text-xs font-medium text-orange-600 dark:bg-orange-500/20 dark:text-orange-300">
+                                <MapPin className="h-3 w-3" />
+                                {product._location}
+                            </span>
+                            {product.isSelectNumber === 1 && (
+                                <span className="inline-flex items-center gap-1 rounded-full bg-cyan-50 px-2.5 py-0.5 text-xs font-medium text-cyan-600 dark:bg-cyan-500/20 dark:text-cyan-300">
+                                    可选号
+                                </span>
+                            )}
+                        </div>
+
+                        {/* 特色标签 */}
+                        <div className="mb-3">
+                            <GantanhaoFeatureTags tags={product._tags} max={8} />
+                        </div>
+
+                        {/* 底部按钮 */}
+                        <div className="mt-auto flex items-center gap-2.5 border-t border-gray-100 pt-2.5 dark:border-gray-800">
+                            <a
+                                href={product._orderUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-sm font-normal text-white transition-colors hover:bg-blue-700 lg:px-5 lg:py-2"
+                            >
+                                立即办理
+                                <ArrowRight className="h-4 w-4" />
+                            </a>
+                            <Link
+                                href={detailHref}
+                                className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-normal text-gray-700 transition-colors hover:border-blue-400 hover:text-blue-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400 dark:hover:border-blue-400 dark:hover:text-blue-400 lg:px-4 lg:py-2"
+                            >
+                                <FileText className="h-4 w-4" />
+                                查看详情
+                            </Link>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </article>
     );
 }
-
 /* ========== 商品网格（分页加载） ========== */
 
 /** 每页加载数量 */
@@ -458,9 +592,9 @@ function ProductGrid({
 
     return (
         <>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {displayed.map((product) => (
-                    <GantanhaoProductCard key={product.codeNumber} product={product} />
+            <div className="grid items-start gap-3 sm:gap-4 lg:grid-cols-2 lg:gap-5">
+                {displayed.map((product, i) => (
+                    <GantanhaoProductCard key={product.codeNumber} product={product} index={i} />
                 ))}
             </div>
 
