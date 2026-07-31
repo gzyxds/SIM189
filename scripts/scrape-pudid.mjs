@@ -244,10 +244,9 @@ async function scrapeViaIndex2() {
  * 尝试通过 H5 跳转规律推导 pudID
  * 思路：某些商品的 netAddr 末尾 ID 与 pudID 可能有关联
  * @param {number} productID
- * @param {string} productName
  * @returns {Promise<string|null>}
  */
-async function tryExtractPudidFromPage(productID, productName) {
+async function tryExtractPudidFromPage(productID) {
   // 尝试访问已知可能包含 pudID 的页面
   const testUrls = [
     `${BASE_SHOP}/ProductEn/Shop/${AGENT_ID}/${productID}`,
@@ -314,8 +313,8 @@ async function main() {
   if (missed.length > 0 && missed.length <= 50) {
     console.log(`\n[Step 4] 对 ${missed.length} 个未命中商品进行单独抓取...`);
     let recovered = 0;
-    for (const { productID, productName } of missed) {
-      const pudID = await tryExtractPudidFromPage(productID, productName);
+    for (const { productID } of missed) {
+      const pudID = await tryExtractPudidFromPage(productID);
       if (pudID) {
         pudidMap[String(productID)] = pudID;
         recovered++;

@@ -44,7 +44,6 @@ export default function FaqPage() {
             {/* ===== JSON-LD 结构化数据 — FAQPage Schema ===== */}
             <script
                 type="application/ld+json"
-                // eslint-disable-next-line react/no-dangerously-set-innerhtml
                 dangerouslySetInnerHTML={{
                     __html: JSON.stringify({
                         "@context": "https://schema.org",

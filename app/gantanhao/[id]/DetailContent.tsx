@@ -12,7 +12,7 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import type { GantanhaoProductWithMeta, GantanhaoOperator } from "@/lib/api/gantanhao";
-import { mapGantanhaoOperator, GANTANHAO_OPERATOR_LABEL } from "@/lib/api/gantanhao";
+import { GANTANHAO_OPERATOR_LABEL } from "@/lib/api/gantanhao";
 import Header from "@/components/home/Header";
 import Footer from "@/components/home/Footer";
 import { SITE_WIDTH_STYLE, containerClass } from "@/lib/layout";

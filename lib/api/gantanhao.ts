@@ -546,8 +546,6 @@ export async function fetchGantanhaoProducts(options?: {
     products: GantanhaoProductWithMeta[];
     total: number;
 }> {
-    const apiKey = getApiKey();
-
     /* ===== 构建缓存键（含筛选条件，不同筛选条件使用不同缓存） ===== */
     const cacheIdentity = `gantanhao-${options?.isOnSale ?? "all"}-${options?.rebateType ?? "all"}-${options?.isRecommend ?? "all"}`;
 

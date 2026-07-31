@@ -23,7 +23,6 @@ import {
   ClipboardList,
   Cloud,
   CreditCard,
-  ExternalLink,
   Globe,
   LogIn,
   MessageCircle,
@@ -274,17 +273,6 @@ const OPERATORS = [
   { name: "电信", color: "bg-blue-500" },
   { name: "联通", color: "bg-orange-500" },
   { name: "广电", color: "bg-purple-500" },
-];
-
-/* ========== 合作品牌 ========== */
-
-const BRANDS = [
-  { src: "/cooperate/中国移动.webp", alt: "中国移动" },
-  { src: "/cooperate/中国联通.webp", alt: "中国联通" },
-  { src: "/cooperate/中国电信.webp", alt: "中国电信" },
-  { src: "/cooperate/中国广电.webp", alt: "中国广电" },
-  { src: "/cooperate/京东物流.webp", alt: "京东物流" },
-  { src: "/cooperate/顺丰速运.webp", alt: "顺丰速运" },
 ];
 
 /* ========== 号卡领取滚动跑马灯 ========== */

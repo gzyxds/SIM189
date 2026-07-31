@@ -11,7 +11,6 @@ import path from "path";
 
 // 客户端安全类型/工具从独立模块导入
 import type { NewsArticle } from "./news-types";
-import { getCategoryConfig, getAllCategories } from "./news-types";
 
 // 重新导出供服务端页面使用（统一导入路径）
 export type { NewsArticle, NewsCategoryType, NewsCategoryConfig } from "./news-types";
@@ -256,14 +255,6 @@ function countWords(content: string): number {
         .replace(/[#*`\-\[\]()>|!~]/g, "")
         .replace(/\s+/g, "")
         .length;
-}
-
-/** 根据文件名生成模拟阅读量 */
-function generateReads(filename: string): number {
-    const num = parseInt(filename, 10);
-    if (isNaN(num)) return 500;
-    // 按文件名编号产生不同的阅读量
-    return 500 + (num * 137 + (num % 7) * 213) % 9500;
 }
 
 /** 默认作者头像（使用站点 Logo） */

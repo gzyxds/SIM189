@@ -25,7 +25,6 @@ import {
     Clock,
     X,
     AlertTriangle,
-    TrendingUp,
     Info,
     ChevronDown,
 } from "lucide-react";

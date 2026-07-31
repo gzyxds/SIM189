@@ -32,7 +32,6 @@ import {
     FAQ_CATEGORIES,
     ALL_CATEGORIES,
     HOT_FAQS,
-    getFaqsByCategory,
     searchFaqs,
     type FaqItem,
 } from "@/lib/data/faq";
@@ -296,7 +295,7 @@ export default function FaqContent() {
                 break;
             case "tel":
                 /* 拨打电话 */
-                if (action.href) window.location.href = action.href;
+                if (action.href) window.location.assign(action.href);
                 break;
             case "feedback":
                 /* 打开客服弹窗作为反馈入口 */

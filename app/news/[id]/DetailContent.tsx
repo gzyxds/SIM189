@@ -175,7 +175,7 @@ function ArticleHeader({ article }: { article: NewsArticle }) {
                         <div className="absolute -left-4 top-0 bottom-0 w-1.5 rounded-full bg-blue-600" />
                         <div className="rounded-r-2xl border border-blue-100 bg-blue-50/50 p-6 dark:border-blue-900/30 dark:bg-blue-900/10">
                             <p className="text-lg font-medium leading-relaxed text-gray-700 italic opacity-90 dark:text-gray-300">
-                                " {article.description} "
+                                &ldquo; {article.description} &rdquo;
                             </p>
                         </div>
                     </div>
@@ -216,7 +216,6 @@ function ArticleBody({ html }: { html: string }) {
         <div
             id="article-content"
             className="markdown-body mt-8 border-t border-gray-100 pt-8 sm:mt-10 sm:pt-10 dark:border-gray-800"
-            // eslint-disable-next-line react/no-dangerously-set-innerhtml
             dangerouslySetInnerHTML={{ __html: html }}
         />
     );

@@ -9,6 +9,7 @@
  */
 
 import type { Metadata } from "next";
+import { randomInt } from "node:crypto";
 import { fetchHaokaProducts } from "@/lib/api/haokavip";
 import type { HaokaProductWithMeta } from "@/lib/api/haokavip";
 import { fetchLotMLProducts } from "@/lib/api/lotml";
@@ -24,7 +25,7 @@ import type { GongchuangProductWithMeta } from "@/lib/api/gongchuang";
 import { fetchGantanhaoProducts } from "@/lib/api/gantanhao";
 import type { GantanhaoProductWithMeta } from "@/lib/api/gantanhao";
 import SearchContent from "./SearchContent";
-import type { UnifiedProduct, PlatformKey, UnifiedOperator } from "./types";
+import type { UnifiedProduct } from "./types";
 
 // 重新导出类型供外部使用
 export type { PlatformKey, UnifiedOperator, UnifiedProduct } from "./types";
@@ -383,7 +384,7 @@ export default async function SearchPage() {
     /* ========== 生成随机种子（SSR 一致性关键） ========== */
 
     /** 随机种子 — 服务端生成，客户端水合时使用同一序列 */
-    const randomSeed = Math.random();
+    const randomSeed = randomInt(0, 1_000_000);
 
     /* ========== JSON-LD 结构化数据（SEO） ========== */
 

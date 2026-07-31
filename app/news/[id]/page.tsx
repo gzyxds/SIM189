@@ -6,7 +6,6 @@
  * 展示完整的新闻内容，包含封面图、HTML 正文、相关推荐等。
  */
 
-import type { Metadata } from "next";
 import Link from "next/link";
 import Header from "@/components/home/Header";
 import Footer from "@/components/home/Footer";
@@ -104,7 +103,6 @@ export default async function NewsDetailPage({
             {/* ===== JSON-LD 结构化数据 — Article Schema ===== */}
             <script
                 type="application/ld+json"
-                // eslint-disable-next-line react/no-dangerously-set-innerhtml
                 dangerouslySetInnerHTML={{
                     __html: JSON.stringify({
                         "@context": "https://schema.org",

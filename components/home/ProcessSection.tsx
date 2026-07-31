@@ -5,7 +5,6 @@ import {
   Package,
   Zap,
   Clock,
-  ChevronRight,
   ClipboardCheck,
 } from "lucide-react";
 
