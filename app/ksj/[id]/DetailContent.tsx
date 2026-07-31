@@ -224,7 +224,7 @@ function ProductDetail({ product }: { product: KsjProductWithMeta }) {
                     </div>
 
                     {/* 操作按钮 */}
-                    <div className="flex gap-3">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
                         <a
                             href={getKsjApplyUrl(product.goods_id)}
                             target="_blank"

@@ -350,7 +350,7 @@ function ProductDetail({ product }: { product: YkyProductDetail }) {
                     </div>
 
                     {/* 操作按钮 */}
-                    <div className="flex gap-3">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
                         <Link
                             href="/yky"
                             className="inline-flex items-center justify-center gap-2 rounded-lg border-2 border-blue-600 bg-white px-6 py-3 text-sm font-bold text-blue-600 transition-all hover:bg-blue-50"
@@ -362,7 +362,7 @@ function ProductDetail({ product }: { product: YkyProductDetail }) {
                             href={orderUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-linear-to-r from-blue-600 to-blue-700 px-8 py-3 text-sm font-bold text-white shadow-lg transition-all hover:-translate-y-0.5 hover:shadow-xl"
+                            className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-linear-to-r from-blue-600 to-blue-700 px-8 py-3.5 text-sm font-bold text-white shadow-lg transition-all hover:-translate-y-0.5 hover:shadow-xl order-first sm:order-none"
                         >
                             <ShoppingCart className="size-5" />
                             立即办理
@@ -371,7 +371,7 @@ function ProductDetail({ product }: { product: YkyProductDetail }) {
                             href="https://iot.87haoka.cn/shop#/pages/order/search/index?promoCode=TpImx3gi"
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center justify-center gap-2 rounded-lg border-2 border-gray-300 bg-white px-6 py-3 text-sm font-bold text-gray-600 transition-all hover:bg-gray-50"
+                            className="inline-flex items-center justify-center gap-2 rounded-lg border-2 border-gray-300 bg-white px-5 py-2.5 text-[13px] font-bold text-gray-600 transition-all hover:bg-gray-50 sm:px-6 sm:py-3 sm:text-sm"
                         >
                             <Search className="size-4" />
                             订单查询
