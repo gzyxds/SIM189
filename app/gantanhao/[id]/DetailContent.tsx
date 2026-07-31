@@ -35,6 +35,7 @@ import {
     Copy,
     Share2,
     Loader2,
+    Search,
 } from "lucide-react";
 
 /* ========== Props 类型 ========== */
@@ -135,7 +136,7 @@ function ParamCard({
 }) {
     return (
         <div
-            className={`rounded-xl bg-gradient-to-br p-4 text-center ${gradientFrom || "from-blue-50"} ${gradientTo || "to-indigo-50"}`}
+            className={`rounded-xl bg-linear-to-br p-4 text-center ${gradientFrom || "from-blue-50"} ${gradientTo || "to-indigo-50"}`}
         >
             <p className="mb-1 text-xs text-gray-500">{label}</p>
             <p className={`text-2xl font-black ${textColor || "text-gray-800"}`}>
@@ -321,8 +322,8 @@ function ProductDetail({ product }: { product: GantanhaoProductWithMeta }) {
             {/* ===== 上部分：图片 + 信息 ===== */}
             <div className="grid gap-6 lg:grid-cols-2">
                 {/* 商品封面图片 */}
-                <div className="overflow-hidden rounded-2xl border border-gray-100 bg-gray-50">
-                    <div className="relative aspect-square overflow-hidden">
+                <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white">
+                    <div className="relative aspect-square overflow-hidden bg-white p-6">
                         {product.img ? (
                             <Image
                                 src={product.img}
@@ -465,22 +466,31 @@ function ProductDetail({ product }: { product: GantanhaoProductWithMeta }) {
 
                     {/* 操作按钮 */}
                     <div className="flex gap-3">
-                        <a
-                            href={orderUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex flex-1 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-blue-600 to-blue-700 px-8 py-3 text-sm font-bold text-white shadow-lg transition-all hover:-translate-y-0.5 hover:shadow-xl"
-                        >
-                            <ShoppingCart className="size-5" />
-                            立即办理
-                        </a>
                         <Link
                             href="/gantanhao"
-                            className="inline-flex items-center justify-center gap-2 rounded-full border-2 border-blue-600 bg-white px-6 py-3 text-sm font-bold text-blue-600 transition-all hover:bg-blue-50"
+                            className="inline-flex items-center justify-center gap-2 rounded-lg border-2 border-blue-600 bg-white px-6 py-3 text-sm font-bold text-blue-600 transition-all hover:bg-blue-50"
                         >
                             <ArrowLeft className="size-4" />
                             返回列表
                         </Link>
+                        <a
+                            href={orderUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-linear-to-r from-blue-600 to-blue-700 px-8 py-3 text-sm font-bold text-white shadow-lg transition-all hover:-translate-y-0.5 hover:shadow-xl"
+                        >
+                            <ShoppingCart className="size-5" />
+                            立即办理
+                        </a>
+                        <a
+                            href="https://h5.rimian666.cn/Search/Index"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center justify-center gap-2 rounded-lg border-2 border-gray-300 bg-white px-6 py-3 text-sm font-bold text-gray-600 transition-all hover:bg-gray-50"
+                        >
+                            <Search className="size-4" />
+                            订单查询
+                        </a>
                     </div>
                 </div>
             </div>
@@ -488,179 +498,264 @@ function ProductDetail({ product }: { product: GantanhaoProductWithMeta }) {
             {/* ===== 推广文案（朋友圈分享） ===== */}
             <CopywritingSection product={product} />
 
-            {/* ===== 套餐详情 ===== */}
-            <section className="mt-8 rounded-2xl border border-gray-100 bg-white p-6">
-                <div className="mb-4 flex items-center gap-2">
-                    <div className="h-5 w-1 rounded-full bg-blue-600" />
-                    <h2 className="text-base font-bold text-gray-800">套餐详情</h2>
-                </div>
-                <div className="space-y-3 text-sm text-gray-600">
-                    <div className="flex items-start gap-3">
-                        <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-green-500" />
-                        <div>
-                            <span className="font-semibold text-gray-800">月租费用：</span>
-                            每月仅需{" "}
-                            <span className="font-bold text-blue-600">¥{price}</span>
-                        </div>
-                    </div>
-                    {flowText && (
-                        <div className="flex items-start gap-3">
-                            <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-green-500" />
-                            <div>
-                                <span className="font-semibold text-gray-800">月流量：</span>
-                                <span className="font-bold">{flowText}</span> 全国通用流量
+            {/* ===== 下方左右布局：左侧套餐资料介绍 / 右侧套餐详情等 ===== */}
+            <div className="mt-10 grid items-start gap-8 lg:grid-cols-[5fr_3fr]">
+                {/* 左侧：套餐资料介绍 */}
+                <div className="flex flex-col gap-4">
+                    {/* 商品详情图 */}
+                    {product.descImg && (
+                        <section className="rounded-2xl border border-gray-100 bg-white p-6">
+                            <div className="mb-4 flex items-center gap-2">
+                                <div className="h-5 w-1 rounded-full bg-blue-600" />
+                                <h2 className="text-base font-bold text-gray-800">套餐资料介绍</h2>
                             </div>
-                        </div>
+                            <div className="overflow-hidden rounded-xl">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                    src={product.descImg}
+                                    alt={`${product.name} 详情图`}
+                                    className="h-auto w-full"
+                                />
+                            </div>
+                        </section>
                     )}
-                    <div className="flex items-start gap-3">
-                        <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-green-500" />
-                        <div>
-                            <span className="font-semibold text-gray-800">网络制式：</span>
-                            支持5G/4G网络
+                    {/* 外部链接跳转 */}
+                    {orderUrl && !product.descImg && (
+                        <section className="rounded-2xl border border-gray-100 bg-white p-6">
+                            <div className="mb-4 flex items-center gap-2">
+                                <div className="h-5 w-1 rounded-full bg-blue-600" />
+                                <h2 className="text-base font-bold text-gray-800">套餐资料介绍</h2>
+                            </div>
+                            <p className="mb-4 text-sm text-gray-500">
+                                查看完整的商品介绍、套餐细则及注意事项
+                            </p>
+                            <a
+                                href={orderUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-blue-200 bg-blue-50 px-6 py-4 text-sm font-semibold text-blue-600 transition-all hover:border-blue-400 hover:bg-blue-100"
+                            >
+                                <ExternalLink className="size-5" />
+                                查看完整商品详情
+                                <ChevronRight className="size-4" />
+                            </a>
+                        </section>
+                    )}
+                </div>
+
+                {/* 右侧：套餐详情 + 激活说明 + 温馨提示 + 常见问题 */}
+                <div className="flex flex-col gap-4">
+                    {/* ===== 套餐详情 ===== */}
+                    <section className="rounded-2xl border border-gray-100 bg-white p-6">
+                        <div className="mb-4 flex items-center gap-2">
+                            <div className="h-5 w-1 rounded-full bg-blue-600" />
+                            <h2 className="text-base font-bold text-gray-800">套餐详情</h2>
                         </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                        <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-green-500" />
-                        <div>
-                            <span className="font-semibold text-gray-800">套餐时长：</span>
-                            {duration !== "未知" ? duration : "以运营商实际政策为准"}
+                        <div className="space-y-3 text-sm text-gray-600">
+                            <div className="flex items-start gap-3">
+                                <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-green-500" />
+                                <div>
+                                    <span className="font-semibold text-gray-800">月租费用：</span>
+                                    每月仅需{" "}
+                                    <span className="font-bold text-blue-600">¥{price}</span>
+                                </div>
+                            </div>
+                            {flowText && (
+                                <div className="flex items-start gap-3">
+                                    <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-green-500" />
+                                    <div>
+                                        <span className="font-semibold text-gray-800">月流量：</span>
+                                        <span className="font-bold">{flowText}</span> 全国通用流量
+                                    </div>
+                                </div>
+                            )}
+                            <div className="flex items-start gap-3">
+                                <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-green-500" />
+                                <div>
+                                    <span className="font-semibold text-gray-800">网络制式：</span>
+                                    支持5G/4G网络
+                                </div>
+                            </div>
+                            <div className="flex items-start gap-3">
+                                <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-green-500" />
+                                <div>
+                                    <span className="font-semibold text-gray-800">套餐时长：</span>
+                                    {duration !== "未知" ? duration : "以运营商实际政策为准"}
+                                </div>
+                            </div>
+                            {product.packageContract && (
+                                <div className="flex items-start gap-3">
+                                    <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-green-500" />
+                                    <div>
+                                        <span className="font-semibold text-gray-800">
+                                            合约周期：
+                                        </span>
+                                        {product.packageContract}
+                                    </div>
+                                </div>
+                            )}
+                            <div className="flex items-start gap-3">
+                                <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-green-500" />
+                                <div>
+                                    <span className="font-semibold text-gray-800">发货方式：</span>
+                                    {product.deliveryMethod || "快递"}包邮到家
+                                </div>
+                            </div>
+                            {product.firstChargeChannel && (
+                                <div className="flex items-start gap-3">
+                                    <CreditCard className="mt-0.5 size-4 shrink-0 text-green-500" />
+                                    <div>
+                                        <span className="font-semibold text-gray-800">
+                                            首充渠道：
+                                        </span>
+                                        {product.firstChargeChannel}
+                                    </div>
+                                </div>
+                            )}
                         </div>
-                    </div>
-                    {product.packageContract && (
-                        <div className="flex items-start gap-3">
-                            <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-green-500" />
-                            <div>
-                                <span className="font-semibold text-gray-800">
-                                    合约周期：
+                    </section>
+
+                    {/* ===== 激活说明 ===== */}
+                    <section className="rounded-2xl border border-gray-100 bg-white p-6">
+                        <div className="mb-4 flex items-center gap-2">
+                            <div className="h-5 w-1 rounded-full bg-blue-600" />
+                            <h2 className="text-base font-bold text-gray-800">激活说明</h2>
+                        </div>
+                        <ol className="space-y-3 text-sm text-gray-600">
+                            <li className="flex items-start gap-3">
+                                <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white">
+                                    1
                                 </span>
-                                {product.packageContract}
-                            </div>
-                        </div>
-                    )}
-                    <div className="flex items-start gap-3">
-                        <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-green-500" />
-                        <div>
-                            <span className="font-semibold text-gray-800">发货方式：</span>
-                            {product.deliveryMethod || "快递"}包邮到家
-                        </div>
-                    </div>
-                    {product.firstChargeChannel && (
-                        <div className="flex items-start gap-3">
-                            <CreditCard className="mt-0.5 size-4 shrink-0 text-green-500" />
-                            <div>
-                                <span className="font-semibold text-gray-800">
-                                    首充渠道：
+                                <div>
+                                    {product.openCardMethod
+                                        ? product.openCardMethod
+                                        : "收到SIM卡后，扫描卡板上的二维码下载运营商官方APP"}
+                                </div>
+                            </li>
+                            <li className="flex items-start gap-3">
+                                <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white">
+                                    2
                                 </span>
-                                {product.firstChargeChannel}
+                                <div>
+                                    准备好本人身份证，按照APP指引完成实名认证（需进行人脸识别）
+                                </div>
+                            </li>
+                            <li className="flex items-start gap-3">
+                                <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white">
+                                    3
+                                </span>
+                                <div>
+                                    {product.firstChargeChannel
+                                        ? `认证通过后插入SIM卡，${product.firstChargeChannel}完成首充激活`
+                                        : "认证通过后插入SIM卡，按套餐要求完成首充激活"}
+                                </div>
+                            </li>
+                            <li className="flex items-start gap-3">
+                                <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white">
+                                    4
+                                </span>
+                                <div>
+                                    激活成功后流量一般在24小时内到账，即可正常使用
+                                </div>
+                            </li>
+                        </ol>
+                        {/* 激活参考图片 */}
+                        {product.activationImg && (
+                            <div className="mt-4 overflow-hidden rounded-xl border border-gray-100">
+                                <Image
+                                    src={product.activationImg}
+                                    alt={`${product.name} 激活指引`}
+                                    width={600}
+                                    height={400}
+                                    className="w-full"
+                                />
                             </div>
+                        )}
+                    </section>
+
+                    {/* ===== 温馨提示 ===== */}
+                    <section className="rounded-2xl border border-amber-200 bg-amber-50 p-6">
+                        <h3 className="mb-3 flex items-center gap-2 text-sm font-bold text-amber-700">
+                            <Info className="size-4" />
+                            温馨提示
+                        </h3>
+                        <ul className="ml-5 list-disc space-y-1.5 text-xs leading-relaxed text-amber-700">
+                            <li>本套餐仅限新用户办理，同一身份证30天内限办一张</li>
+                            <li>
+                                收到SIM卡后请尽快完成实名激活，激活后按套餐要求首充
+                            </li>
+                            {product.ageLimit && (
+                                <li>办理年龄限制：{product.ageLimit}</li>
+                            )}
+                            {product.otherRemarks && (
+                                <li>备注：{product.otherRemarks}</li>
+                            )}
+                            <li>如有疑问请联系客服咨询，切勿轻信非官方渠道信息</li>
+                        </ul>
+                    </section>
+
+                    {/* ===== 常见问题 ===== */}
+                    <section className="rounded-2xl border border-gray-100 bg-white p-6">
+                        <div className="mb-4 flex items-center gap-2">
+                            <div className="h-5 w-1 rounded-full bg-blue-600" />
+                            <h2 className="text-base font-bold text-gray-800">常见问题</h2>
                         </div>
-                    )}
+                        <div className="space-y-3">
+                            {[
+                                {
+                                    q: "套餐资费如何计算？",
+                                    a: `本套餐月租为¥${price}/月${flowText ? `，包含${flowText}流量` : ""}。具体资费以运营商实际扣费为准，激活后请留意首月资费说明。`,
+                                },
+                                {
+                                    q: "如何激活卡片？",
+                                    a: product.openCardMethod ||
+                                        "收到SIM卡后，请按照随卡附带的激活指引完成实名认证和激活操作。一般需要下载对应运营商APP或扫描卡片上的二维码进行自助激活。",
+                                },
+                                {
+                                    q: "流量什么时候到账？",
+                                    a: "激活成功后，流量一般在24小时内到账，部分卡品可能需要在指定渠道首充后才能全额到账。首月流量可能按剩余天数比例发放，次月起全额发放。",
+                                },
+                                {
+                                    q: "归属地是哪里？可以选号吗？",
+                                    a: `${product._location ? `归属地为${product._location}` : "归属地由运营商系统自动分配"}。${product.isSelectNumber === 1 ? "本商品支持选号" : "大部分卡品不支持选号，号码随机分配。"}`,
+                                },
+                                {
+                                    q: "合约期多久？可以注销吗？",
+                                    a: product.packageContract
+                                        ? `本套餐合约周期为${product.packageContract}。合约期内注销可能需要支付违约金，具体以运营商政策为准。`
+                                        : `${duration !== "未知" ? `本套餐为${duration}` : "一般为6-24个月"}。合约期内注销可能需要支付违约金，具体以运营商政策为准。`,
+                                },
+                                {
+                                    q: "发货和物流时效？",
+                                    a: `订单审核通过后，一般1-3个工作日内发货，采用${product.deliveryMethod || "快递"}包邮配送。`,
+                                },
+                            ].map((faq, i) => (
+                                <details
+                                    key={i}
+                                    className="group rounded-xl border border-gray-100 bg-white"
+                                >
+                                    <summary className="flex cursor-pointer items-center justify-between p-4 text-sm font-semibold text-gray-800">
+                                        <span className="flex items-center gap-2">
+                                            <span className="flex size-6 items-center justify-center rounded-full bg-blue-600/10 text-xs font-bold text-blue-600">
+                                                Q
+                                            </span>
+                                            {faq.q}
+                                        </span>
+                                        <ChevronRight className="size-4 text-gray-400 transition-transform duration-300 group-open:rotate-90" />
+                                    </summary>
+                                    <div className="border-t border-gray-100 px-4 pb-4 pt-3 text-sm leading-relaxed text-gray-500">
+                                        {faq.a}
+                                    </div>
+                                </details>
+                            ))}
+                        </div>
+                    </section>
                 </div>
-            </section>
-
-            {/* ===== 激活说明 ===== */}
-            <section className="mt-4 rounded-2xl border border-gray-100 bg-white p-6">
-                <div className="mb-4 flex items-center gap-2">
-                    <div className="h-5 w-1 rounded-full bg-blue-600" />
-                    <h2 className="text-base font-bold text-gray-800">激活说明</h2>
-                </div>
-                <ol className="space-y-3 text-sm text-gray-600">
-                    <li className="flex items-start gap-3">
-                        <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white">
-                            1
-                        </span>
-                        <div>
-                            {product.openCardMethod
-                                ? product.openCardMethod
-                                : "收到SIM卡后，扫描卡板上的二维码下载运营商官方APP"}
-                        </div>
-                    </li>
-                    <li className="flex items-start gap-3">
-                        <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white">
-                            2
-                        </span>
-                        <div>
-                            准备好本人身份证，按照APP指引完成实名认证（需进行人脸识别）
-                        </div>
-                    </li>
-                    <li className="flex items-start gap-3">
-                        <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white">
-                            3
-                        </span>
-                        <div>
-                            {product.firstChargeChannel
-                                ? `认证通过后插入SIM卡，${product.firstChargeChannel}完成首充激活`
-                                : "认证通过后插入SIM卡，按套餐要求完成首充激活"}
-                        </div>
-                    </li>
-                    <li className="flex items-start gap-3">
-                        <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white">
-                            4
-                        </span>
-                        <div>
-                            激活成功后流量一般在24小时内到账，即可正常使用
-                        </div>
-                    </li>
-                </ol>
-                {/* 激活参考图片 */}
-                {product.activationImg && (
-                    <div className="mt-4 overflow-hidden rounded-xl border border-gray-100">
-                        <Image
-                            src={product.activationImg}
-                            alt={`${product.name} 激活指引`}
-                            width={600}
-                            height={400}
-                            className="w-full"
-                        />
-                    </div>
-                )}
-            </section>
-
-            {/* ===== 商品详情图 ===== */}
-            {product.descImg && (
-                <section className="mt-4 rounded-2xl border border-gray-100 bg-white p-6">
-                    <div className="mb-4 flex items-center gap-2">
-                        <div className="h-5 w-1 rounded-full bg-blue-600" />
-                        <h2 className="text-base font-bold text-gray-800">宝贝详情</h2>
-                    </div>
-                    <div className="overflow-hidden rounded-xl">
-                        <Image
-                            src={product.descImg}
-                            alt={`${product.name} 详情图`}
-                            width={800}
-                            height={1200}
-                            className="w-full"
-                        />
-                    </div>
-                </section>
-            )}
-
-            {/* ===== 外部链接跳转 ===== */}
-            {orderUrl && !product.descImg && (
-                <section className="mt-4 rounded-2xl border border-gray-100 bg-white p-6">
-                    <div className="mb-4 flex items-center gap-2">
-                        <div className="h-5 w-1 rounded-full bg-blue-600" />
-                        <h2 className="text-base font-bold text-gray-800">宝贝详情</h2>
-                    </div>
-                    <p className="mb-4 text-sm text-gray-500">
-                        查看完整的商品介绍、套餐细则及注意事项
-                    </p>
-                    <a
-                        href={orderUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-blue-200 bg-blue-50 px-6 py-4 text-sm font-semibold text-blue-600 transition-all hover:border-blue-400 hover:bg-blue-100"
-                    >
-                        <ExternalLink className="size-5" />
-                        查看完整商品详情
-                        <ChevronRight className="size-4" />
-                    </a>
-                </section>
-            )}
+            </div>
 
             {/* ===== 禁发区域 ===== */}
             {product.forbiddenArea && (
-                <section className="mt-4 rounded-2xl border border-red-100 bg-red-50 p-6">
+                <section className="mt-10 rounded-2xl border border-red-100 bg-red-50 p-6">
                     <h3 className="mb-3 flex items-center gap-2 text-sm font-bold text-red-700">
                         <MapPin className="size-4" />
                         禁发区域
@@ -671,30 +766,9 @@ function ProductDetail({ product }: { product: GantanhaoProductWithMeta }) {
                 </section>
             )}
 
-            {/* ===== 温馨提示 ===== */}
-            <section className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-6">
-                <h3 className="mb-3 flex items-center gap-2 text-sm font-bold text-amber-700">
-                    <Info className="size-4" />
-                    温馨提示
-                </h3>
-                <ul className="ml-5 list-disc space-y-1.5 text-xs leading-relaxed text-amber-700">
-                    <li>本套餐仅限新用户办理，同一身份证30天内限办一张</li>
-                    <li>
-                        收到SIM卡后请尽快完成实名激活，激活后按套餐要求首充
-                    </li>
-                    {product.ageLimit && (
-                        <li>办理年龄限制：{product.ageLimit}</li>
-                    )}
-                    {product.otherRemarks && (
-                        <li>备注：{product.otherRemarks}</li>
-                    )}
-                    <li>如有疑问请联系客服咨询，切勿轻信非官方渠道信息</li>
-                </ul>
-            </section>
-
             {/* ===== 套餐标签 ===== */}
             {tags.length > 0 && (
-                <section className="mt-4 rounded-2xl border border-gray-100 bg-white p-6">
+                <section className="mt-10 rounded-2xl border border-gray-100 bg-white p-6">
                     <div className="mb-4 flex items-center gap-2">
                         <div className="h-5 w-1 rounded-full bg-blue-600" />
                         <h2 className="text-base font-bold text-gray-800">套餐标签</h2>
@@ -712,65 +786,8 @@ function ProductDetail({ product }: { product: GantanhaoProductWithMeta }) {
                 </section>
             )}
 
-            {/* ===== 常见问题 ===== */}
-            <section className="mt-4 rounded-2xl border border-gray-100 bg-white p-6">
-                <div className="mb-4 flex items-center gap-2">
-                    <div className="h-5 w-1 rounded-full bg-blue-600" />
-                    <h2 className="text-base font-bold text-gray-800">常见问题</h2>
-                </div>
-                <div className="space-y-3">
-                    {[
-                        {
-                            q: "套餐资费如何计算？",
-                            a: `本套餐月租为¥${price}/月${flowText ? `，包含${flowText}流量` : ""}。具体资费以运营商实际扣费为准，激活后请留意首月资费说明。`,
-                        },
-                        {
-                            q: "如何激活卡片？",
-                            a: product.openCardMethod ||
-                                "收到SIM卡后，请按照随卡附带的激活指引完成实名认证和激活操作。一般需要下载对应运营商APP或扫描卡片上的二维码进行自助激活。",
-                        },
-                        {
-                            q: "流量什么时候到账？",
-                            a: "激活成功后，流量一般在24小时内到账，部分卡品可能需要在指定渠道首充后才能全额到账。首月流量可能按剩余天数比例发放，次月起全额发放。",
-                        },
-                        {
-                            q: "归属地是哪里？可以选号吗？",
-                            a: `${product._location ? `归属地为${product._location}` : "归属地由运营商系统自动分配"}。${product.isSelectNumber === 1 ? "本商品支持选号" : "大部分卡品不支持选号，号码随机分配。"}`,
-                        },
-                        {
-                            q: "合约期多久？可以注销吗？",
-                            a: product.packageContract
-                                ? `本套餐合约周期为${product.packageContract}。合约期内注销可能需要支付违约金，具体以运营商政策为准。`
-                                : `${duration !== "未知" ? `本套餐为${duration}` : "一般为6-24个月"}。合约期内注销可能需要支付违约金，具体以运营商政策为准。`,
-                        },
-                        {
-                            q: "发货和物流时效？",
-                            a: `订单审核通过后，一般1-3个工作日内发货，采用${product.deliveryMethod || "快递"}包邮配送。`,
-                        },
-                    ].map((faq, i) => (
-                        <details
-                            key={i}
-                            className="group rounded-xl border border-gray-100 bg-white"
-                        >
-                            <summary className="flex cursor-pointer items-center justify-between p-4 text-sm font-semibold text-gray-800">
-                                <span className="flex items-center gap-2">
-                                    <span className="flex size-6 items-center justify-center rounded-full bg-blue-600/10 text-xs font-bold text-blue-600">
-                                        Q
-                                    </span>
-                                    {faq.q}
-                                </span>
-                                <ChevronRight className="size-4 text-gray-400 transition-transform duration-300 group-open:rotate-90" />
-                            </summary>
-                            <div className="border-t border-gray-100 px-4 pb-4 pt-3 text-sm leading-relaxed text-gray-500">
-                                {faq.a}
-                            </div>
-                        </details>
-                    ))}
-                </div>
-            </section>
-
             {/* ===== 联系我们 ===== */}
-            <section className="mt-4 rounded-2xl border border-gray-100 bg-white p-6">
+            <section className="mt-10 rounded-2xl border border-gray-100 bg-white p-6">
                 <div className="mb-4 flex items-center gap-2">
                     <div className="h-5 w-1 rounded-full bg-blue-600" />
                     <h2 className="text-base font-bold text-gray-800">联系我们</h2>

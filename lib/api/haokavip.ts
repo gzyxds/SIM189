@@ -50,6 +50,63 @@ export interface HaokaProductWithMeta extends HaokaProduct {
   _tags: { text: string; className: string }[];
 }
 
+/**
+ * 商品详情接口（/open/api/product_detail）返回类型
+ *
+ * 与列表接口相比，详情接口额外返回：
+ * - detail_image：商品详情富文本（多为 <img>），即「详情图 / 图文详情」
+ * - 结构化的月租(current_monthly)/流量(current+directional)/语音(telephone)/
+ *   运营商(operator)/年龄(age_range)/归属地(issuer_info)/禁发(restricted_area)/
+ *   标签(tags)/套餐时长(ltime)/首充(top_up,charge_description) 等
+ */
+export interface HaokaProductDetail {
+  id: number;
+  name: string;
+  subtitle: string;
+  notes: string;
+  proxy_price: number;
+  se_num: number;
+  ment_type: number;
+  idcard_photo: number;
+  top_up: string;
+  /** 通用流量（GB） */
+  current: number;
+  /** 定向流量（GB），无定向时为 0 */
+  directional: number;
+  /** 语音通话（分钟） */
+  telephone: number;
+  /** 原月租 */
+  original_monthly: string;
+  /** 当前/优惠月租 */
+  current_monthly: number;
+  /** 首充描述 */
+  charge_description: string;
+  /** 允许办理的年龄段 */
+  age_range: string[];
+  /** 可发/禁发类型：prohibitShipping 禁发 / allowShipping 可发 */
+  shipping_type: string;
+  /** 发行地（归属地） */
+  issuer_info: {
+    city_code: string;
+    city_name: string;
+    province_code: string;
+    province_name: string;
+  };
+  /** 可发/禁发地区列表 */
+  restricted_area: { province_code: string; province_name: string }[];
+  /** 产品标签，当前仅有 default */
+  tags: { default: { tag_id: number; title: string }[] };
+  /** 商品主图 url */
+  product_image: string;
+  /** 运营商中文名（如 中国联通） */
+  operator: string;
+  /** 商品详情富文本，多为 <img> 组成的图文详情 */
+  detail_image: string;
+  /** 套餐时长优惠期（月），如 6 / 12 / 24 */
+  ltime: string;
+  [key: string]: unknown;
+}
+
 /** 运营商枚举 */
 export type Operator = "mobile" | "telecom" | "unicom" | "broadcast" | "unknown";
 
@@ -222,6 +279,58 @@ export async function fetchHaokaProducts(): Promise<{
   return result;
 }
 
+/* ========== 商品详情接口 ========== */
+
+/** 商品详情缓存（按 appId:productId 维度，避免重复请求） */
+const detailCacheMap = new Map<string, { data: HaokaProductDetail; ts: number }>();
+const DETAIL_TTL_MS = 12 * 60 * 60 * 1000;
+
+/**
+ * 获取单个商品详情
+ * POST /open/api/product_detail
+ *
+ * 请求体: { app_id, json_data: AES加密后的Base64字符串 }
+ * 其中 json_data 加密前为: { product_id }
+ *
+ * 相比列表接口，详情接口额外返回 detail_image（图文详情/详情图）、
+ * 以及结构化的月租/流量/语音/运营商/年龄/归属地/禁发地区/标签等字段。
+ * 失败时返回 null（由调用方回退到列表数据）。
+ */
+export async function fetchHaokaProductDetail(
+  productId: number,
+): Promise<HaokaProductDetail | null> {
+  const appId = process.env.HAOKAVIP_APP_ID;
+  const appSecret = process.env.HAOKAVIP_APP_SECRET;
+  if (!appId || !appSecret) return null;
+
+  const key = `${appId}:${productId}`;
+  const hit = detailCacheMap.get(key);
+  if (hit && Date.now() - hit.ts < DETAIL_TTL_MS) return hit.data;
+
+  try {
+    const encryptedData = encrypt({ product_id: productId }, appSecret);
+    const response = await fetch(
+      "https://api.haokavip.com/open/api/product_detail",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ app_id: appId, json_data: encryptedData }),
+        cache: "no-store",
+      },
+    );
+    if (!response.ok) return null;
+    const result = (await response.json()) as {
+      success: boolean;
+      data?: HaokaProductDetail;
+    };
+    if (!result.success || !result.data) return null;
+    detailCacheMap.set(key, { data: result.data, ts: Date.now() });
+    return result.data;
+  } catch {
+    return null;
+  }
+}
+
 /* ========== 运营商工具函数 ========== */
 
 /**
@@ -233,6 +342,17 @@ export function mapOperator(productName: string): Operator {
   if (/电信|telecom/i.test(name)) return "telecom";
   if (/联通|unicom/i.test(name)) return "unicom";
   if (/广电|broadcast/i.test(name)) return "broadcast";
+  return "unknown";
+}
+
+/**
+ * 将详情接口返回的中文运营商名（如 "中国联通"）映射为内部 Operator 枚举
+ */
+export function mapOperatorCn(cn: string): Operator {
+  if (/移动/.test(cn)) return "mobile";
+  if (/电信/.test(cn)) return "telecom";
+  if (/联通/.test(cn)) return "unicom";
+  if (/广电/.test(cn)) return "broadcast";
   return "unknown";
 }
 

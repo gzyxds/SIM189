@@ -41,6 +41,7 @@ import {
   Clock,
   BadgeCheck,
   Banknote,
+  Search,
 } from "lucide-react";
 
 /* ========== Props ========== */
@@ -197,8 +198,8 @@ function ProductDetail({ product }: { product: LotMLProductWithMeta }) {
       {/* ===== 上部分：图片 + 基本信息 ===== */}
       <div className="grid gap-6 lg:grid-cols-2">
         {/* 商品图片 */}
-        <div className="overflow-hidden rounded-2xl border border-gray-100 bg-gray-50">
-          <div className="relative aspect-square overflow-hidden">
+        <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white">
+          <div className="relative aspect-square overflow-hidden bg-white p-6">
             {product.mainPic ? (
               <Image
                 src={product.mainPic}
@@ -208,7 +209,7 @@ function ProductDetail({ product }: { product: LotMLProductWithMeta }) {
                 sizes="(max-width: 1024px) 100vw, 50vw"
               />
             ) : (
-              <div className="flex h-full items-center justify-center bg-linear-to-br from-gray-50 to-gray-100">
+              <div className="flex h-full items-center justify-center bg-white">
                 <Signal className="size-16 text-gray-300" />
               </div>
             )}
@@ -323,22 +324,31 @@ function ProductDetail({ product }: { product: LotMLProductWithMeta }) {
 
           {/* 操作按钮 */}
           <div className="flex gap-3">
-            <a
-              href={orderUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex flex-1 items-center justify-center gap-2 rounded-full bg-linear-to-r from-blue-600 to-blue-700 px-8 py-3 text-sm font-bold text-white shadow-lg transition-all hover:-translate-y-0.5 hover:shadow-xl"
-            >
-              <ShoppingCart className="size-5" />
-              立即办理
-            </a>
             <Link
               href="/lotml"
-              className="inline-flex items-center justify-center gap-2 rounded-full border-2 border-blue-600 bg-white px-6 py-3 text-sm font-bold text-blue-600 transition-all hover:bg-blue-50"
+              className="inline-flex items-center justify-center gap-2 rounded-lg border-2 border-blue-600 bg-white px-6 py-3 text-sm font-bold text-blue-600 transition-all hover:bg-blue-50"
             >
               <ArrowLeft className="size-4" />
               返回列表
             </Link>
+            <a
+              href={orderUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-linear-to-r from-blue-600 to-blue-700 px-8 py-3 text-sm font-bold text-white shadow-lg transition-all hover:-translate-y-0.5 hover:shadow-xl"
+            >
+              <ShoppingCart className="size-5" />
+              立即办理
+            </a>
+            <a
+              href="https://h5.rimian666.cn/Search/Index"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center gap-2 rounded-lg border-2 border-gray-300 bg-white px-6 py-3 text-sm font-bold text-gray-600 transition-all hover:bg-gray-50"
+            >
+              <Search className="size-4" />
+              订单查询
+            </a>
           </div>
         </div>
       </div>
@@ -396,214 +406,212 @@ function ProductDetail({ product }: { product: LotMLProductWithMeta }) {
         </section>
       )}
 
-      {/* ===== 套餐详情 ===== */}
-      <section className="mt-4 rounded-2xl border border-gray-100 bg-white p-6">
-        <div className="mb-4 flex items-center gap-2">
-          <div className="h-5 w-1 rounded-full bg-blue-600" />
-          <h2 className="text-base font-bold text-gray-800">套餐详情</h2>
+      {/* ===== 下方左右分栏：左=套餐资料介绍，右=套餐详情/激活/提示/FAQ ===== */}
+      <div className="mt-10 grid items-start gap-8 lg:grid-cols-[5fr_3fr]">
+        {/* 左：套餐资料介绍（已移除商品图） */}
+        <div className="flex flex-col gap-4">
+          {(product.littlepicture || product.netAddr) && (
+            <section className="rounded-2xl border border-gray-100 bg-white p-8">
+              <div className="mb-6 flex items-center gap-2">
+                <div className="h-5 w-1 rounded-full bg-blue-600" />
+                <h2 className="text-base font-bold text-gray-800">套餐资料介绍</h2>
+              </div>
+              {product.littlepicture && product.littlepicture !== product.mainPic && (
+                <div className="mb-6 overflow-hidden rounded-xl">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={product.littlepicture}
+                    alt="套餐详情图"
+                    className="h-auto w-full"
+                  />
+                </div>
+              )}
+              {product.netAddr && (
+                <a
+                  href={product.netAddr}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-blue-200 bg-blue-50 px-6 py-4 text-sm font-semibold text-blue-600 transition-all hover:border-blue-400 hover:bg-blue-100"
+                >
+                  <ExternalLink className="size-5" />
+                  查看完整套餐资料
+                  <ChevronRight className="size-4" />
+                </a>
+              )}
+            </section>
+          )}
         </div>
-        <div className="space-y-3 text-sm text-gray-600">
-          {price > 0 && (
-            <div className="flex items-start gap-3">
-              <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-green-500" />
-              <div>
-                <span className="font-semibold text-gray-800">月租费用：</span>
-                每月仅需{" "}
-                <span className="font-bold text-blue-600">¥{price}</span>
+
+        {/* 右：套餐详情 + 激活说明 + 温馨提示 + 常见问题 */}
+        <div className="flex flex-col gap-4">
+          {/* 套餐详情 */}
+          <section className="rounded-2xl border border-gray-100 bg-white p-6">
+            <div className="mb-4 flex items-center gap-2">
+              <div className="h-5 w-1 rounded-full bg-blue-600" />
+              <h2 className="text-base font-bold text-gray-800">套餐详情</h2>
+            </div>
+            <div className="space-y-3 text-sm text-gray-600">
+              {price > 0 && (
+                <div className="flex items-start gap-3">
+                  <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-green-500" />
+                  <div>
+                    <span className="font-semibold text-gray-800">月租费用：</span>
+                    每月仅需{" "}
+                    <span className="font-bold text-blue-600">¥{price}</span>
+                  </div>
+                </div>
+              )}
+              {flow && (
+                <div className="flex items-start gap-3">
+                  <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-green-500" />
+                  <div>
+                    <span className="font-semibold text-gray-800">月流量：</span>
+                    <span className="font-bold">{flow}</span> 全国通用流量
+                  </div>
+                </div>
+              )}
+              {voice && (
+                <div className="flex items-start gap-3">
+                  <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-green-500" />
+                  <div>
+                    <span className="font-semibold text-gray-800">语音通话：</span>
+                    <span className="font-bold">{voice}</span> 全国通话
+                  </div>
+                </div>
+              )}
+              <div className="flex items-start gap-3">
+                <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-green-500" />
+                <div>
+                  <span className="font-semibold text-gray-800">套餐时长：</span>
+                  {duration}
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-green-500" />
+                <div>
+                  <span className="font-semibold text-gray-800">归属地：</span>
+                  {product.area || "随机归属地"}
+                </div>
+              </div>
+              {product.disableArea && (
+                <div className="flex items-start gap-3">
+                  <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-red-400" />
+                  <div>
+                    <span className="font-semibold text-gray-800">禁发地区：</span>
+                    <span className="text-red-500">{product.disableArea}</span>
+                  </div>
+                </div>
+              )}
+              <div className="flex items-start gap-3">
+                <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-green-500" />
+                <div>
+                  <span className="font-semibold text-gray-800">发货方式：</span>
+                  京东/顺丰包邮到家，1-3天送达
+                </div>
               </div>
             </div>
-          )}
-          {flow && (
-            <div className="flex items-start gap-3">
-              <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-green-500" />
-              <div>
-                <span className="font-semibold text-gray-800">月流量：</span>
-                <span className="font-bold">{flow}</span> 全国通用流量
-              </div>
-            </div>
-          )}
-          {voice && (
-            <div className="flex items-start gap-3">
-              <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-green-500" />
-              <div>
-                <span className="font-semibold text-gray-800">语音通话：</span>
-                <span className="font-bold">{voice}</span> 全国通话
-              </div>
-            </div>
-          )}
-          <div className="flex items-start gap-3">
-            <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-green-500" />
-            <div>
-              <span className="font-semibold text-gray-800">套餐时长：</span>
-              {duration}
-            </div>
-          </div>
-          <div className="flex items-start gap-3">
-            <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-green-500" />
-            <div>
-              <span className="font-semibold text-gray-800">归属地：</span>
-              {product.area || "随机归属地"}
-            </div>
-          </div>
-          {product.disableArea && (
-            <div className="flex items-start gap-3">
-              <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-red-400" />
-              <div>
-                <span className="font-semibold text-gray-800">禁发地区：</span>
-                <span className="text-red-500">{product.disableArea}</span>
-              </div>
-            </div>
-          )}
-          <div className="flex items-start gap-3">
-            <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-green-500" />
-            <div>
-              <span className="font-semibold text-gray-800">发货方式：</span>
-              京东/顺丰包邮到家，1-3天送达
-            </div>
-          </div>
-        </div>
-      </section>
+          </section>
 
-      {/* ===== 套餐资料介绍 ===== */}
-      {(product.littlepicture || product.netAddr) && (
-        <section className="mt-4 rounded-2xl border border-gray-100 bg-white p-6">
-          <div className="mb-4 flex items-center gap-2">
-            <div className="h-5 w-1 rounded-full bg-blue-600" />
-            <h2 className="text-base font-bold text-gray-800">套餐资料介绍</h2>
-          </div>
-
-          {/* 套餐详情图 */}
-          {product.littlepicture && product.littlepicture !== product.mainPic && (
-            <div className="relative mb-4 aspect-video w-full overflow-hidden rounded-xl bg-gray-50">
-              <Image
-                src={product.littlepicture}
-                alt="套餐详情图"
-                fill
-                className="object-contain"
-                sizes="(max-width: 1024px) 100vw, 768px"
-              />
+          {/* 激活说明 */}
+          <section className="rounded-2xl border border-gray-100 bg-white p-6">
+            <div className="mb-4 flex items-center gap-2">
+              <div className="h-5 w-1 rounded-full bg-blue-600" />
+              <h2 className="text-base font-bold text-gray-800">激活说明</h2>
             </div>
-          )}
-
-          {/* 套餐资料外链 */}
-          {product.netAddr && (
-            <>
-              <p className="mb-4 text-sm text-gray-500">
-                查看完整的套餐说明、资费细则及注意事项
-              </p>
-              <a
-                href={product.netAddr}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-blue-200 bg-blue-50 px-6 py-4 text-sm font-semibold text-blue-600 transition-all hover:border-blue-400 hover:bg-blue-100"
-              >
-                <ExternalLink className="size-5" />
-                查看完整套餐资料
-                <ChevronRight className="size-4" />
-              </a>
-            </>
-          )}
-        </section>
-      )}
-
-      {/* ===== 激活说明 ===== */}
-      <section className="mt-4 rounded-2xl border border-gray-100 bg-white p-6">
-        <div className="mb-4 flex items-center gap-2">
-          <div className="h-5 w-1 rounded-full bg-blue-600" />
-          <h2 className="text-base font-bold text-gray-800">激活说明</h2>
-        </div>
-        <ol className="space-y-3 text-sm text-gray-600">
-          {[
-            "收到SIM卡后，扫描卡板上的二维码下载运营商官方APP",
-            "准备好本人身份证，按照APP指引完成实名认证（需进行人脸识别）",
-            "认证通过后插入SIM卡，按套餐要求完成首充激活",
-            "激活成功后流量一般在24小时内到账，即可正常使用",
-          ].map((step, i) => (
-            <li key={i} className="flex items-start gap-3">
-              <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white">
-                {i + 1}
-              </span>
-              <div>{step}</div>
-            </li>
-          ))}
-        </ol>
-      </section>
-
-      {/* ===== 温馨提示 ===== */}
-      <section className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-6">
-        <h3 className="mb-3 flex items-center gap-2 text-sm font-bold text-amber-700">
-          <Info className="size-4" />
-          温馨提示
-        </h3>
-        <ul className="ml-5 list-disc space-y-1.5 text-xs leading-relaxed text-amber-700">
-          <li>
-            本套餐仅限年龄 {product.Age1 || 18} ~ {product.Age2 || 60}{" "}
-            岁用户办理，同一身份证限办一张
-          </li>
-          <li>收到SIM卡后请尽快完成实名激活，激活后按套餐要求首充</li>
-          {product.disableArea && (
-            <li>
-              本套餐不支持发货至：
-              <span className="font-semibold">{product.disableArea}</span>
-            </li>
-          )}
-          <li>如有疑问请联系客服咨询，切勿轻信非官方渠道信息</li>
-        </ul>
-      </section>
-
-      {/* ===== 常见问题 ===== */}
-      <section className="mt-4 rounded-2xl border border-gray-100 bg-white p-6">
-        <div className="mb-4 flex items-center gap-2">
-          <div className="h-5 w-1 rounded-full bg-blue-600" />
-          <h2 className="text-base font-bold text-gray-800">常见问题</h2>
-        </div>
-        <div className="space-y-3">
-          {[
-            {
-              q: "套餐资费如何计算？",
-              a: `本套餐月租为${price > 0 ? `¥${price}/月` : "面议"}，${flow ? `包含${flow}流量` : ""}${voice ? `和${voice}通话时长` : ""}。具体资费以运营商实际扣费为准，激活后请留意首月资费说明。`,
-            },
-            {
-              q: "如何激活卡片？",
-              a: "收到SIM卡后，请按照随卡附带的激活指引完成实名认证和激活操作。一般需要下载对应运营商APP或扫描卡片上的二维码进行自助激活。",
-            },
-            {
-              q: "流量什么时候到账？",
-              a: "激活成功后，流量一般在24小时内到账，部分卡品可能需要在指定渠道首充后才能全额到账。首月流量可能按剩余天数比例发放，次月起全额发放。",
-            },
-            {
-              q: "归属地是哪里？",
-              a: `归属地为 ${product.area || "随机分配"}。${product.numberSel > 0 ? numberSelText + "，可在下单时选择心仪号码。" : "大部分卡品不支持选号，号码随机分配。"}`,
-            },
-            {
-              q: "合约期多久？佣金怎么结算？",
-              a: `本套餐合约期为${duration}，返佣类型为${product.BackMoneyType || "无"}。${product.Rule ? `结算规则：${product.Rule.slice(0, 80)}${product.Rule.length > 80 ? "……" : ""}` : ""}`,
-            },
-            {
-              q: "发货和物流时效？",
-              a: "订单审核通过后，一般1-3个工作日内发货，采用京东或顺丰快递包邮配送。审核时间一般为1-2个工作日。",
-            },
-          ].map((faq, i) => (
-            <details
-              key={i}
-              className="group rounded-xl border border-gray-100 bg-white"
-            >
-              <summary className="flex cursor-pointer items-center justify-between p-4 text-sm font-semibold text-gray-800">
-                <span className="flex items-center gap-2">
-                  <span className="flex size-6 items-center justify-center rounded-full bg-blue-600/10 text-xs font-bold text-blue-600">
-                    Q
+            <ol className="space-y-3 text-sm text-gray-600">
+              {[
+                "收到SIM卡后，扫描卡板上的二维码下载运营商官方APP",
+                "准备好本人身份证，按照APP指引完成实名认证（需进行人脸识别）",
+                "认证通过后插入SIM卡，按套餐要求完成首充激活",
+                "激活成功后流量一般在24小时内到账，即可正常使用",
+              ].map((step, i) => (
+                <li key={i} className="flex items-start gap-3">
+                  <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white">
+                    {i + 1}
                   </span>
-                  {faq.q}
-                </span>
-                <ChevronRight className="size-4 text-gray-400 transition-transform duration-300 group-open:rotate-90" />
-              </summary>
-              <div className="border-t border-gray-100 px-4 pb-4 pt-3 text-sm leading-relaxed text-gray-500">
-                {faq.a}
-              </div>
-            </details>
-          ))}
+                  <div>{step}</div>
+                </li>
+              ))}
+            </ol>
+          </section>
+
+          {/* 温馨提示 */}
+          <section className="rounded-2xl border border-amber-200 bg-amber-50 p-6">
+            <h3 className="mb-3 flex items-center gap-2 text-sm font-bold text-amber-700">
+              <Info className="size-4" />
+              温馨提示
+            </h3>
+            <ul className="ml-5 list-disc space-y-1.5 text-xs leading-relaxed text-amber-700">
+              <li>
+                本套餐仅限年龄 {product.Age1 || 18} ~ {product.Age2 || 60}{" "}
+                岁用户办理，同一身份证限办一张
+              </li>
+              <li>收到SIM卡后请尽快完成实名激活，激活后按套餐要求首充</li>
+              {product.disableArea && (
+                <li>
+                  本套餐不支持发货至：
+                  <span className="font-semibold">{product.disableArea}</span>
+                </li>
+              )}
+              <li>如有疑问请联系客服咨询，切勿轻信非官方渠道信息</li>
+            </ul>
+          </section>
+
+          {/* 常见问题 */}
+          <section className="rounded-2xl border border-gray-100 bg-white p-6">
+            <div className="mb-4 flex items-center gap-2">
+              <div className="h-5 w-1 rounded-full bg-blue-600" />
+              <h2 className="text-base font-bold text-gray-800">常见问题</h2>
+            </div>
+            <div className="space-y-3">
+              {[
+                {
+                  q: "套餐资费如何计算？",
+                  a: `本套餐月租为${price > 0 ? `¥${price}/月` : "面议"}，${flow ? `包含${flow}流量` : ""}${voice ? `和${voice}通话时长` : ""}。具体资费以运营商实际扣费为准，激活后请留意首月资费说明。`,
+                },
+                {
+                  q: "如何激活卡片？",
+                  a: "收到SIM卡后，请按照随卡附带的激活指引完成实名认证和激活操作。一般需要下载对应运营商APP或扫描卡片上的二维码进行自助激活。",
+                },
+                {
+                  q: "流量什么时候到账？",
+                  a: "激活成功后，流量一般在24小时内到账，部分卡品可能需要在指定渠道首充后才能全额到账。首月流量可能按剩余天数比例发放，次月起全额发放。",
+                },
+                {
+                  q: "归属地是哪里？",
+                  a: `归属地为 ${product.area || "随机分配"}。${product.numberSel > 0 ? numberSelText + "，可在下单时选择心仪号码。" : "大部分卡品不支持选号，号码随机分配。"}`,
+                },
+                {
+                  q: "合约期多久？佣金怎么结算？",
+                  a: `本套餐合约期为${duration}，返佣类型为${product.BackMoneyType || "无"}。${product.Rule ? `结算规则：${product.Rule.slice(0, 80)}${product.Rule.length > 80 ? "……" : ""}` : ""}`,
+                },
+                {
+                  q: "发货和物流时效？",
+                  a: "订单审核通过后，一般1-3个工作日内发货，采用京东或顺丰快递包邮配送。审核时间一般为1-2个工作日。",
+                },
+              ].map((faq, i) => (
+                <details
+                  key={i}
+                  className="group rounded-xl border border-gray-100 bg-white"
+                >
+                  <summary className="flex cursor-pointer items-center justify-between p-4 text-sm font-semibold text-gray-800">
+                    <span className="flex items-center gap-2">
+                      <span className="flex size-6 items-center justify-center rounded-full bg-blue-600/10 text-xs font-bold text-blue-600">
+                        Q
+                      </span>
+                      {faq.q}
+                    </span>
+                    <ChevronRight className="size-4 text-gray-400 transition-transform duration-300 group-open:rotate-90" />
+                  </summary>
+                  <div className="border-t border-gray-100 px-4 pb-4 pt-3 text-sm leading-relaxed text-gray-500">
+                    {faq.a}
+                  </div>
+                </details>
+              ))}
+            </div>
+          </section>
         </div>
-      </section>
+      </div>
 
       {/* ===== 固定底部办理按钮 ===== */}
       <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-gray-100 bg-white/95 px-4 py-3 shadow-[0_-2px_12px_rgba(0,0,0,0.06)] backdrop-blur-sm lg:hidden">
@@ -611,7 +619,7 @@ function ProductDetail({ product }: { product: LotMLProductWithMeta }) {
           href={orderUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex w-full items-center justify-center gap-2 rounded-full bg-linear-to-r from-blue-600 to-blue-700 py-3.5 text-sm font-bold text-white shadow-lg"
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-linear-to-r from-blue-600 to-blue-700 py-3.5 text-sm font-bold text-white shadow-lg"
         >
           <ShoppingCart className="size-5" />
           立即免费办理

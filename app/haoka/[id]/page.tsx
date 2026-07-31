@@ -4,7 +4,7 @@
  * 根据商品ID展示商品详细信息（月租/流量/通话/归属地等）
  * 数据来源：浩卡联盟分销系统
  */
-import { fetchHaokaProducts, type HaokaProduct } from "@/lib/api/haokavip";
+import { fetchHaokaProducts, fetchHaokaProductDetail, type HaokaProduct, type HaokaProductDetail } from "@/lib/api/haokavip";
 import DetailContent from "@/app/haoka/[id]/DetailContent";
 
 export async function generateMetadata({
@@ -74,5 +74,15 @@ export default async function ProductDetailPage({
 
   const product = products.find((p) => p.product_id === Number(id));
 
-  return <DetailContent product={product ?? null} error={error} />;
+  // 拉取商品详情接口（含 detail_image 图文详情），失败不影响列表数据渲染
+  let detail: HaokaProductDetail | null = null;
+  if (product) {
+    try {
+      detail = await fetchHaokaProductDetail(product.product_id);
+    } catch {
+      detail = null;
+    }
+  }
+
+  return <DetailContent product={product ?? null} detail={detail} error={error} />;
 }

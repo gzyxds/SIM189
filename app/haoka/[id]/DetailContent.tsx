@@ -9,20 +9,21 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import type { HaokaProduct, Operator } from "@/lib/api/haokavip";
-import { mapOperator, OPERATOR_LABEL, parseLocation, parseDuration, parseTags } from "@/lib/api/haokavip";
+import type { HaokaProduct, HaokaProductDetail, Operator } from "@/lib/api/haokavip";
+import { mapOperator, mapOperatorCn, OPERATOR_LABEL, parseLocation, parseDuration, parseTags } from "@/lib/api/haokavip";
 import Header from "@/components/home/Header";
 import Footer from "@/components/home/Footer";
 import { SITE_WIDTH_STYLE, containerClass } from "@/lib/layout";
 import {
   Signal, ArrowLeft, ShoppingCart, ChevronRight, ShieldCheck, Info,
-  ExternalLink, CheckCircle2, Mail, Phone, Clock,
+  ExternalLink, CheckCircle2, Mail, Phone, Clock, Search,
 } from "lucide-react";
 
 /* ========== Props 类型 ========== */
 
 interface DetailContentProps {
   product: HaokaProduct | null;
+  detail: HaokaProductDetail | null;
   error: string | null;
 }
 
@@ -43,6 +44,24 @@ function parseShortName(name: string): string {
 function parseTotalFlow(name: string): string {
   const m = name.match(/(\d+)(?:G|GB)/i);
   return m ? `${m[1]}G` : "";
+}
+
+/**
+ * 从详情富文本（detail_image）中提取 <img> 的 src。
+ * 仅允许 https 且 host 属于 haokavip 静态域名，避免直接 dangerouslySetInnerHTML
+ * 注入第三方 HTML 造成 XSS。
+ */
+function extractImageSrcs(html: string): string[] {
+  if (!html) return [];
+  const srcs: string[] = [];
+  // 兼容 src="..." / src='...' / src=...（无引号，遇空格或 > 结束）
+  const re = /<img[^>]+src=(?:"([^"]+)"|'([^']+)'|([^\s>]+))/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(html))) {
+    const url = m[1] || m[2] || m[3];
+    if (url && /^https:\/\/[^/]*haokavip\.com\//i.test(url)) srcs.push(url);
+  }
+  return srcs;
 }
 
 /** 运营商 UI 配置 */
@@ -99,7 +118,7 @@ function ParamCard({ label, value, unit, gradientFrom, gradientTo, textColor }: 
   label: string; value: string; unit?: string; gradientFrom?: string; gradientTo?: string; textColor?: string;
 }) {
   return (
-    <div className={`rounded-xl bg-gradient-to-br p-4 text-center ${gradientFrom || "from-blue-50"} ${gradientTo || "to-indigo-50"}`}>
+    <div className={`rounded-xl bg-linear-to-br p-4 text-center ${gradientFrom || "from-blue-50"} ${gradientTo || "to-indigo-50"}`}>
       <p className="mb-1 text-xs text-gray-500">{label}</p>
       <p className={`text-2xl font-black ${textColor || "text-gray-800"}`}>{value}</p>
       {unit && <p className="text-xs text-gray-400">{unit}</p>}
@@ -109,24 +128,39 @@ function ParamCard({ label, value, unit, gradientFrom, gradientTo, textColor }: 
 
 /* ========== 商品详情主体 ========== */
 
-function ProductDetail({ product }: { product: HaokaProduct }) {
-  const provider = mapOperator(product.product_name) as Operator;
+function ProductDetail({ product, detail }: { product: HaokaProduct; detail: HaokaProductDetail | null }) {
+  // 优先使用「商品详情接口」的结构化字段；缺失时回退到从商品名正则解析（列表接口数据）
+  const provider = (detail?.operator ? mapOperatorCn(detail.operator) : mapOperator(product.product_name)) as Operator;
   const ui = OPERATOR_UI[provider] || OPERATOR_UI.unknown;
-  const price = parsePrice(product.product_name);
-  const flowText = parseFlow(product.product_name);
-  const voiceText = parseVoice(product.product_name);
+  const price = detail?.current_monthly != null ? String(detail.current_monthly) : parsePrice(product.product_name);
+  const flowText = detail
+    ? `${detail.current}G${detail.directional ? ` + ${detail.directional}G定向` : ""}`
+    : parseFlow(product.product_name);
+  const voiceText = detail?.telephone ? `${detail.telephone}分钟` : parseVoice(product.product_name);
   const { location, shipping } = parseLocation(product.product_name);
-  const duration = parseDuration(product.product_name);
-  const tags = parseTags(product.product_name);
+  const duration = detail?.ltime ? `${detail.ltime}个月` : parseDuration(product.product_name);
+  const tags = detail?.tags?.default?.length
+    ? detail.tags.default.map((t) => ({
+        text: t.title,
+        className: "bg-blue-50 text-blue-700 border-blue-200",
+      }))
+    : parseTags(product.product_name);
   const totalFlow = parseTotalFlow(product.product_name);
+  const subtitle = detail?.subtitle || "";
+  const notes = detail?.notes || "";
+  const ageText = detail?.age_range?.length
+    ? `${detail.age_range[0]}-${detail.age_range[detail.age_range.length - 1]}岁`
+    : "";
+  // 详情图文（detail_image，多为 <img>）。缺失时回退 product_image 海报。
+  const detailImgs = detail?.detail_image ? extractImageSrcs(detail.detail_image) : [];
 
   return (
     <div className={containerClass("py-6 lg:py-10")} style={SITE_WIDTH_STYLE}>
       {/* ===== 上部分：图片 + 信息 ===== */}
       <div className="grid gap-6 lg:grid-cols-2">
         {/* 商品图片 */}
-        <div className="overflow-hidden rounded-2xl border border-gray-100 bg-gray-50">
-          <div className="relative aspect-square overflow-hidden">
+        <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white">
+          <div className="relative aspect-square overflow-hidden bg-white p-6">
             <Image src={product.product_image} alt={product.product_name} fill className="object-cover" sizes="(max-width: 1024px) 100vw, 50vw" />
           </div>
         </div>
@@ -145,9 +179,11 @@ function ProductDetail({ product }: { product: HaokaProduct }) {
           </div>
 
           <h1 className="mb-2 text-xl font-bold text-gray-900 lg:text-2xl">{product.product_name}</h1>
+          {subtitle && <p className="mb-1 text-sm font-medium text-blue-600">{subtitle}</p>}
           <p className="mb-4 text-sm text-gray-500">
-            月租¥{price} · {totalFlow || flowText}流量 · {voiceText || "无通话"}{shipping !== "全国" ? ` · 仅发${shipping}` : ""}
+            月租¥{price} · {totalFlow || flowText}流量 · {voiceText || "无通话"}{ageText ? ` · 年龄${ageText}` : ""}{shipping !== "全国" ? ` · 仅发${shipping}` : ""}
           </p>
+          {notes && <p className="mb-3 rounded-lg bg-gray-50 px-3 py-2 text-xs leading-relaxed text-gray-500">{notes}</p>}
 
           {/* 核心参数 */}
           <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -187,20 +223,67 @@ function ProductDetail({ product }: { product: HaokaProduct }) {
 
           {/* 操作按钮 */}
           <div className="flex gap-3">
-            <a href={product.product_link} target="_blank" rel="noopener noreferrer"
-              className="flex flex-1 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-blue-600 to-blue-700 px-8 py-3 text-sm font-bold text-white shadow-lg transition-all hover:-translate-y-0.5 hover:shadow-xl">
-              <ShoppingCart className="size-5" />立即办理
-            </a>
             <Link href="/haoka"
-              className="inline-flex items-center justify-center gap-2 rounded-full border-2 border-blue-600 bg-white px-6 py-3 text-sm font-bold text-blue-600 transition-all hover:bg-blue-50">
+              className="inline-flex items-center justify-center gap-2 rounded-lg border-2 border-blue-600 bg-white px-6 py-3 text-sm font-bold text-blue-600 transition-all hover:bg-blue-50">
               <ArrowLeft className="size-4" />返回列表
             </Link>
+            <a href={product.product_link} target="_blank" rel="noopener noreferrer"
+              className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-linear-to-r from-blue-600 to-blue-700 px-8 py-3 text-sm font-bold text-white shadow-lg transition-all hover:-translate-y-0.5 hover:shadow-xl">
+              <ShoppingCart className="size-5" />立即办理
+            </a>
+            <a href="https://mp.yapingkeji.com/#/pages/sales_index/orderSearchentrance?__s=&appId=" target="_blank" rel="noopener noreferrer"
+              className="inline-flex items-center justify-center gap-2 rounded-lg border-2 border-gray-300 bg-white px-6 py-3 text-sm font-bold text-gray-600 transition-all hover:bg-gray-50">
+              <Search className="size-4" />订单查询
+            </a>
           </div>
         </div>
       </div>
 
-      {/* ===== 套餐详情 ===== */}
-      <section className="mt-8 rounded-2xl border border-gray-100 bg-white p-6">
+      {/* ===== 下方左右分栏：左=套餐资料介绍，右=套餐详情/激活/提示/FAQ ===== */}
+      <div className="mt-10 grid items-start gap-8 lg:grid-cols-[5fr_3fr]">
+        {/* 左：套餐资料介绍 */}
+        <div className="flex flex-col gap-4">
+          <section className="rounded-2xl border border-gray-100 bg-white p-8">
+            <div className="mb-6 flex items-center gap-2">
+              <div className="h-5 w-1 rounded-full bg-blue-600" />
+              <h2 className="text-base font-bold text-gray-800">套餐资料介绍</h2>
+            </div>
+            {/* 左栏「套餐资料介绍」优先展示详情接口返回的 detail_image（图文详情，多为 img）；
+                缺失时回退 product_image 海报。均原图完整展示、不裁切。 */}
+            <div className="overflow-hidden rounded-xl border border-gray-100">
+              {detailImgs.length > 0 ? (
+                detailImgs.map((src, i) => (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    key={i}
+                    src={src}
+                    alt={`${product.product_name} 套餐资料介绍 ${i + 1}`}
+                    className="h-auto w-full"
+                  />
+                ))
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={product.product_image}
+                  alt={`${product.product_name} 套餐资料`}
+                  className="h-auto w-full"
+                />
+              )}
+            </div>
+            <p className="mb-4 mt-4 text-sm text-gray-500">
+              点击查看完整商品介绍、套餐细则及在线办理
+            </p>
+            <a href={product.product_link} target="_blank" rel="noopener noreferrer"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-blue-200 bg-blue-50 px-6 py-4 text-sm font-semibold text-blue-600 transition-all hover:border-blue-400 hover:bg-blue-100">
+              <ExternalLink className="size-5" />查看完整套餐资料
+              <ChevronRight className="size-4" />
+            </a>
+          </section>
+        </div>
+
+        {/* 右：套餐详情 + 激活说明 + 温馨提示 + 常见问题 */}
+        <div className="flex flex-col gap-4">
+          <section className="mt-0 rounded-2xl border border-gray-100 bg-white p-6">
         <div className="mb-4 flex items-center gap-2">
           <div className="h-5 w-1 rounded-full bg-blue-600" />
           <h2 className="text-base font-bold text-gray-800">套餐详情</h2>
@@ -263,27 +346,6 @@ function ProductDetail({ product }: { product: HaokaProduct }) {
         </ol>
       </section>
 
-      {/* ===== 宝贝详情 — 外部跳转 ===== */}
-      {product.product_link && (
-        <section className="mt-4 rounded-2xl border border-gray-100 bg-white p-6">
-          <div className="mb-4 flex items-center gap-2">
-            <div className="h-5 w-1 rounded-full bg-blue-600" />
-            <h2 className="text-base font-bold text-gray-800">宝贝详情</h2>
-          </div>
-          <p className="mb-4 text-sm text-gray-500">查看完整的商品介绍、套餐细则及注意事项</p>
-          <a
-            href={product.product_link}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-blue-200 bg-blue-50 px-6 py-4 text-sm font-semibold text-blue-600 transition-all hover:border-blue-400 hover:bg-blue-100"
-          >
-            <ExternalLink className="size-5" />
-            查看完整商品详情
-            <ChevronRight className="size-4" />
-          </a>
-        </section>
-      )}
-
       {/* ===== 温馨提示 ===== */}
       <section className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-6">
         <h3 className="mb-3 flex items-center gap-2 text-sm font-bold text-amber-700">
@@ -296,21 +358,6 @@ function ProductDetail({ product }: { product: HaokaProduct }) {
           <li>如有疑问请联系客服咨询，切勿轻信非官方渠道信息</li>
         </ul>
       </section>
-
-      {/* ===== 套餐标签 ===== */}
-      {tags.length > 0 && (
-        <section className="mt-4 rounded-2xl border border-gray-100 bg-white p-6">
-          <div className="mb-4 flex items-center gap-2">
-            <div className="h-5 w-1 rounded-full bg-blue-600" />
-            <h2 className="text-base font-bold text-gray-800">套餐标签</h2>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {tags.map((t, i) => (
-              <span key={i} className={`inline-block rounded-lg border px-3 py-1.5 text-xs font-medium ${t.className}`}>{t.text}</span>
-            ))}
-          </div>
-        </section>
-      )}
 
       {/* ===== 常见问题 ===== */}
       <section className="mt-4 rounded-2xl border border-gray-100 bg-white p-6">
@@ -341,6 +388,24 @@ function ProductDetail({ product }: { product: HaokaProduct }) {
         </div>
       </section>
 
+        </div>
+      </div>
+
+      {/* ===== 套餐标签 ===== */}
+      {tags.length > 0 && (
+        <section className="mt-8 rounded-2xl border border-gray-100 bg-white p-6">
+          <div className="mb-4 flex items-center gap-2">
+            <div className="h-5 w-1 rounded-full bg-blue-600" />
+            <h2 className="text-base font-bold text-gray-800">套餐标签</h2>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {tags.map((t, i) => (
+              <span key={i} className={`inline-block rounded-lg border px-3 py-1.5 text-xs font-medium ${t.className}`}>{t.text}</span>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* ===== 联系我们 ===== */}
       <section className="mt-4 rounded-2xl border border-gray-100 bg-white p-6">
         <div className="mb-4 flex items-center gap-2">
@@ -369,7 +434,7 @@ function ProductDetail({ product }: { product: HaokaProduct }) {
 
 /* ========== 主入口 ========== */
 
-export default function DetailContent({ product, error }: DetailContentProps) {
+export default function DetailContent({ product, detail, error }: DetailContentProps) {
   if (error || !product) {
     return <NotFoundPage error={error ?? undefined} />;
   }
@@ -379,7 +444,7 @@ export default function DetailContent({ product, error }: DetailContentProps) {
       <Header />
       <Breadcrumb productName={product.product_name} />
       <main>
-        <ProductDetail product={product} />
+        <ProductDetail product={product} detail={detail} />
       </main>
       <Footer />
     </div>

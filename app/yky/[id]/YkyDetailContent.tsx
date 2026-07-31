@@ -42,6 +42,7 @@ import {
     Zap,
     MapPin,
     BadgeCheck,
+    Search,
 } from "lucide-react";
 
 /* ========== Props ========== */
@@ -139,7 +140,7 @@ function ParamCard({
 }) {
     return (
         <div
-            className={`rounded-xl bg-gradient-to-br p-4 text-center ${gradientFrom || "from-blue-50"} ${gradientTo || "to-indigo-50"}`}
+            className={`rounded-xl bg-linear-to-br p-4 text-center ${gradientFrom || "from-blue-50"} ${gradientTo || "to-indigo-50"}`}
         >
             <p className="mb-1 text-xs text-gray-500">{label}</p>
             <p className={`text-2xl font-black ${textColor || "text-gray-800"}`}>
@@ -221,8 +222,8 @@ function ProductDetail({ product }: { product: YkyProductDetail }) {
             {/* ===== 上部分：图片 + 基本信息 ===== */}
             <div className="grid gap-6 lg:grid-cols-2">
                 {/* 商品图片 */}
-                <div className="overflow-hidden rounded-2xl border border-gray-100 bg-gray-50">
-                    <div className="relative aspect-square overflow-hidden">
+                <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white">
+                    <div className="relative aspect-square overflow-hidden bg-white p-6">
                         {product.tips ? (
                             <Image
                                 src={product.tips}
@@ -232,7 +233,7 @@ function ProductDetail({ product }: { product: YkyProductDetail }) {
                                 sizes="(max-width: 1024px) 100vw, 50vw"
                             />
                         ) : (
-                            <div className="flex h-full items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
+                            <div className="flex h-full items-center justify-center bg-linear-to-br from-gray-50 to-gray-100">
                                 <Signal className="size-16 text-gray-300" />
                             </div>
                         )}
@@ -350,52 +351,38 @@ function ProductDetail({ product }: { product: YkyProductDetail }) {
 
                     {/* 操作按钮 */}
                     <div className="flex gap-3">
-                        <a
-                            href={orderUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex flex-1 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-blue-600 to-blue-700 px-8 py-3 text-sm font-bold text-white shadow-lg transition-all hover:-translate-y-0.5 hover:shadow-xl"
-                        >
-                            <ShoppingCart className="size-5" />
-                            立即办理
-                        </a>
                         <Link
                             href="/yky"
-                            className="inline-flex items-center justify-center gap-2 rounded-full border-2 border-blue-600 bg-white px-6 py-3 text-sm font-bold text-blue-600 transition-all hover:bg-blue-50"
+                            className="inline-flex items-center justify-center gap-2 rounded-lg border-2 border-blue-600 bg-white px-6 py-3 text-sm font-bold text-blue-600 transition-all hover:bg-blue-50"
                         >
                             <ArrowLeft className="size-4" />
                             返回列表
                         </Link>
+                        <a
+                            href={orderUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-linear-to-r from-blue-600 to-blue-700 px-8 py-3 text-sm font-bold text-white shadow-lg transition-all hover:-translate-y-0.5 hover:shadow-xl"
+                        >
+                            <ShoppingCart className="size-5" />
+                            立即办理
+                        </a>
+                        <a
+                            href="https://iot.87haoka.cn/shop#/pages/order/search/index?promoCode=TpImx3gi"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center justify-center gap-2 rounded-lg border-2 border-gray-300 bg-white px-6 py-3 text-sm font-bold text-gray-600 transition-all hover:bg-gray-50"
+                        >
+                            <Search className="size-4" />
+                            订单查询
+                        </a>
                     </div>
                 </div>
             </div>
 
-            {/* ===== 商品详情图 ===== */}
-            {product.details && product.details.length > 0 && (
-                <section className="mt-8 rounded-2xl border border-gray-100 bg-white p-6">
-                    <div className="mb-4 flex items-center gap-2">
-                        <div className="h-5 w-1 rounded-full bg-blue-600" />
-                        <h2 className="text-base font-bold text-gray-800">商品详情</h2>
-                    </div>
-                    <div className="space-y-3">
-                        {product.details.map((imgUrl, i) => (
-                            <div key={i} className="relative aspect-video w-full overflow-hidden rounded-lg">
-                                <Image
-                                    src={imgUrl}
-                                    alt={`${product.name} 详情图 ${i + 1}`}
-                                    fill
-                                    className="object-cover"
-                                    sizes="(max-width: 768px) 100vw, 768px"
-                                />
-                            </div>
-                        ))}
-                    </div>
-                </section>
-            )}
-
-            {/* ===== 商品描述 ===== */}
+            {/* ===== 商品描述（整宽，置于分栏上方） ===== */}
             {product.des && (
-                <section className="mt-4 rounded-2xl border border-gray-100 bg-white p-6">
+                <section className="mt-8 rounded-2xl border border-gray-100 bg-white p-6">
                     <div className="mb-4 flex items-center gap-2">
                         <div className="h-5 w-1 rounded-full bg-blue-600" />
                         <h2 className="text-base font-bold text-gray-800">套餐描述</h2>
@@ -406,7 +393,7 @@ function ProductDetail({ product }: { product: YkyProductDetail }) {
                 </section>
             )}
 
-            {/* ===== 佣金详情 ===== */}
+            {/* ===== 佣金详情（整宽，置于分栏上方） ===== */}
             <section className="mt-4 rounded-2xl border border-gray-100 bg-white p-6">
                 <div className="mb-4 flex items-center gap-2">
                     <div className="h-5 w-1 rounded-full bg-blue-600" />
@@ -460,8 +447,37 @@ function ProductDetail({ product }: { product: YkyProductDetail }) {
                 </div>
             </section>
 
+            {/* ===== 下方左右分栏：左=套餐资料介绍，右=套餐详情/激活/提示/FAQ ===== */}
+            <div className="mt-10 grid items-start gap-8 lg:grid-cols-[5fr_3fr]">
+                {/* 左：套餐资料介绍（商品详情图，完整显示不裁切） */}
+                <div className="flex flex-col gap-4">
+                    {product.details && product.details.length > 0 && (
+                        <section className="rounded-2xl border border-gray-100 bg-white p-8">
+                            <div className="mb-6 flex items-center gap-2">
+                                <div className="h-5 w-1 rounded-full bg-blue-600" />
+                                <h2 className="text-base font-bold text-gray-800">套餐资料介绍</h2>
+                            </div>
+                            <div className="space-y-3">
+                                {product.details.map((imgUrl, i) => (
+                                    <div key={i} className="overflow-hidden rounded-xl">
+                                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                                        <img
+                                            src={imgUrl}
+                                            alt={`${product.name} 详情图 ${i + 1}`}
+                                            className="h-auto w-full"
+                                        />
+                                    </div>
+                                ))}
+                            </div>
+                        </section>
+                    )}
+                </div>
+
+                {/* 右：套餐详情 + 激活说明 + 温馨提示 + 常见问题 */}
+                <div className="flex flex-col gap-4">
+
             {/* ===== 套餐详情 ===== */}
-            <section className="mt-4 rounded-2xl border border-gray-100 bg-white p-6">
+            <section className="mt-0 rounded-2xl border border-gray-100 bg-white p-6">
                 <div className="mb-4 flex items-center gap-2">
                     <div className="h-5 w-1 rounded-full bg-blue-600" />
                     <h2 className="text-base font-bold text-gray-800">套餐详情</h2>
@@ -578,26 +594,6 @@ function ProductDetail({ product }: { product: YkyProductDetail }) {
                 </ul>
             </section>
 
-            {/* ===== 套餐标签 ===== */}
-            {tags.length > 0 && (
-                <section className="mt-4 rounded-2xl border border-gray-100 bg-white p-6">
-                    <div className="mb-4 flex items-center gap-2">
-                        <div className="h-5 w-1 rounded-full bg-blue-600" />
-                        <h2 className="text-base font-bold text-gray-800">套餐标签</h2>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                        {tags.map((tag, i) => (
-                            <span
-                                key={i}
-                                className="inline-block rounded-lg border bg-gray-50 px-3 py-1.5 text-xs font-medium text-gray-600"
-                            >
-                                {tag.label}
-                            </span>
-                        ))}
-                    </div>
-                </section>
-            )}
-
             {/* ===== 常见问题 ===== */}
             <section className="mt-4 rounded-2xl border border-gray-100 bg-white p-6">
                 <div className="mb-4 flex items-center gap-2">
@@ -652,6 +648,29 @@ function ProductDetail({ product }: { product: YkyProductDetail }) {
                 </div>
             </section>
 
+            </div>
+            </div>
+
+            {/* ===== 套餐标签 ===== */}
+            {tags.length > 0 && (
+                <section className="mt-8 rounded-2xl border border-gray-100 bg-white p-6">
+                    <div className="mb-4 flex items-center gap-2">
+                        <div className="h-5 w-1 rounded-full bg-blue-600" />
+                        <h2 className="text-base font-bold text-gray-800">套餐标签</h2>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                        {tags.map((tag, i) => (
+                            <span
+                                key={i}
+                                className="inline-block rounded-lg border bg-gray-50 px-3 py-1.5 text-xs font-medium text-gray-600"
+                            >
+                                {tag.label}
+                            </span>
+                        ))}
+                    </div>
+                </section>
+            )}
+
             {/* ===== 联系我们 ===== */}
             <section className="mt-4 rounded-2xl border border-gray-100 bg-white p-6">
                 <div className="mb-4 flex items-center gap-2">
@@ -664,14 +683,14 @@ function ProductDetail({ product }: { product: YkyProductDetail }) {
                         <Phone className="size-5 text-blue-600" />
                         <div>
                             <p className="text-xs text-gray-400">客服电话</p>
-                            <p className="text-sm font-semibold text-gray-800">400-xxx-xxxx</p>
+                            <p className="text-sm font-semibold text-gray-800">400-9100019</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-3 rounded-xl border border-gray-100 bg-gray-50 p-4">
                         <Mail className="size-5 text-blue-600" />
                         <div>
                             <p className="text-xs text-gray-400">客服邮箱</p>
-                            <p className="text-sm font-semibold text-gray-800">service@87haoka.cn</p>
+                            <p className="text-sm font-semibold text-gray-800">236749035@qq.com</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-3 rounded-xl border border-gray-100 bg-gray-50 p-4">
@@ -690,7 +709,7 @@ function ProductDetail({ product }: { product: YkyProductDetail }) {
                     href={orderUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-blue-600 to-blue-700 py-3.5 text-sm font-bold text-white shadow-lg"
+                    className="flex w-full items-center justify-center gap-2 rounded-lg bg-linear-to-r from-blue-600 to-blue-700 py-3.5 text-sm font-bold text-white shadow-lg"
                 >
                     <ShoppingCart className="size-5" />
                     立即免费办理
