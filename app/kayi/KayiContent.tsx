@@ -34,6 +34,9 @@ import {
     SatelliteDish,
     Wifi,
     Radio,
+    Share2,
+    X,
+    Check,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import ClaimTicker from "@/components/ClaimTicker";
@@ -245,16 +248,16 @@ function SpecCell({
     return (
         <div className="flex min-w-0 flex-col items-center justify-center">
             <span className="flex items-baseline gap-px whitespace-nowrap">
-                <span className={`text-[15px] leading-none font-bold tabular-nums sm:text-lg lg:text-xl ${valueClass}`}>
+                <span className={`text-base leading-none font-bold tabular-nums sm:text-xl lg:text-2xl ${valueClass}`}>
                     {value}
                 </span>
                 {unit && (
-                    <span className={`text-[9px] leading-none font-semibold sm:text-[10px] ${valueClass} opacity-70`}>
+                    <span className={`text-[9px] leading-none font-semibold sm:text-[11px] ${valueClass} opacity-70`}>
                         {unit}
                     </span>
                 )}
             </span>
-            <span className="mt-1 text-[9px] leading-none whitespace-nowrap text-gray-400 sm:text-[10px]">
+            <span className="mt-1 text-[9px] leading-none whitespace-nowrap text-gray-400 sm:text-[11px]">
                 {label}
             </span>
         </div>
@@ -310,16 +313,6 @@ function formatSales(sales: number): string {
     if (sales >= 1000) return `${(sales / 1000).toFixed(1)}千`;
     return String(sales);
 }
-
-/** 特色标签配色 */
-const TAG_VARIANT_STYLES: Record<FeatureTag["variant"], string> = {
-    red: "border-red-200 bg-red-50 text-red-600",
-    orange: "border-orange-200 bg-orange-50 text-orange-600",
-    green: "border-emerald-200 bg-emerald-50 text-emerald-600",
-    blue: "border-blue-200 bg-blue-50 text-blue-600",
-    purple: "border-purple-200 bg-purple-50 text-purple-600",
-    gray: "border-gray-200 bg-gray-50 text-gray-600",
-};
 
 /** 特色标签数据结构 */
 interface FeatureTag {
@@ -401,8 +394,8 @@ function extractFeatureTags(product: KayiProductWithMeta): FeatureTag[] {
 /**
  * 卡易商品卡片
  *
- * 参考 DuoduoProductDetail.astro 右侧布局节奏：
- * 标题/销量 → 套餐描述 → 4 列参数条 → 标签行（条件+特色合并） → 底部双按钮
+ * PC 端：横向宽卡片（左图右内容）
+ * 移动端：参考图示风格（圆角卡片 + 渐变边框 + 紧凑参数区）
  */
 function KayiProductCard({ product, index }: { product: KayiProductWithMeta; index: number }) {
     const op = OPERATOR_CARD_STYLE[product._provider] || OPERATOR_CARD_STYLE.unknown;
@@ -413,10 +406,11 @@ function KayiProductCard({ product, index }: { product: KayiProductWithMeta; ind
     const ageLimit = extractAgeLimit(product);
     const featured = isFeatured(product);
     const detailHref = `/kayi/${product.id}`;
-    const featureTags = extractFeatureTags(product);
+    const featureTags = useMemo(() => extractFeatureTags(product), [product]);
+    const hasImage = Boolean(product.tips);
 
     /* 蓝色套餐描述 */
-    const planDesc = `月租¥${price} · ${product.commonFlow || 0}G通用${(product.fixedFlow || 0) > 0 ? `+${product.fixedFlow}G定向` : ""}${(product.callDuration || 0) > 0 ? ` · ${product.callDuration}分钟通话` : ""}`;
+    const planDesc = `月租¥${price} · ${product.commonFlow || 0}G 通用${(product.fixedFlow || 0) > 0 ? `+${product.fixedFlow}G 定向` : ""}${(product.callDuration || 0) > 0 ? ` · ${product.callDuration}分钟通话` : ""}`;
 
     /* 4 列固定参数 */
     const specData: SpecItem[] = [
@@ -426,124 +420,276 @@ function KayiProductCard({ product, index }: { product: KayiProductWithMeta; ind
         { value: String(product.callDuration || 0), unit: "分钟", label: "通话分钟", valueClass: "text-gray-900" },
     ];
 
+    /** 移动端分享按钮点击处理 */
+    const handleShare = useCallback(async () => {
+        const url = typeof window !== "undefined" ? `${window.location.origin}${detailHref}` : detailHref;
+        if (navigator.share) {
+            try {
+                await navigator.share({ title, url });
+            } catch {
+                // 用户取消或分享失败，静默处理
+            }
+        } else {
+            try {
+                await navigator.clipboard.writeText(url);
+            } catch {
+                // 复制失败，静默处理
+            }
+        }
+    }, [detailHref, title]);
+
     return (
-        <article className="group relative flex flex-row overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md">
-            {/* ===== 左区：商品图 ===== */}
-            <Link
-                href={detailHref}
-                className="relative block w-[35%] shrink-0 bg-white p-2 sm:w-5/12 sm:p-3 lg:w-2/5 lg:bg-linear-to-br lg:from-gray-50 lg:to-gray-100"
-            >
-                <div className="relative aspect-square overflow-hidden rounded-xl bg-gray-50 ring-1 ring-gray-100">
-                    {product.tips ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                            src={product.tips}
-                            alt={product.name}
-                            className="h-full w-full object-cover"
-                            loading="lazy"
-                        />
-                    ) : (
-                        <div className="flex h-full w-full items-center justify-center bg-linear-to-br from-gray-50 to-gray-100">
-                            <Signal className="size-6 text-gray-300" />
-                        </div>
-                    )}
-                </div>
-
-                {/* 热销/主推角标：图片左上角 */}
-                {(featured || index < 3) && (
-                    <span
-                        className={`absolute left-2 top-2 z-10 inline-flex items-center gap-0.5 rounded-lg px-2 py-0.5 text-[9px] font-bold text-white shadow-md sm:left-3 sm:top-3 sm:text-[10px] ${
-                            featured ? "bg-linear-to-r from-orange-500 to-red-500" : "bg-red-500"
-                        }`}
-                    >
-                        <Flame className="size-2.5" />
-                        {featured ? "主推" : "热销"}
+        <article className="group relative overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-200 dark:bg-dark-2 dark:ring-dark-3">
+            {/* ===== 移动端布局（<sm）：上下结构===== */}
+            <div className="block sm:hidden">
+                <div className="p-3">
+                    {/*运营商标签：右上角 */}
+                    <span className={`absolute right-3 top-3 z-10 flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium ${op.text} dark:${op.bg.replace('bg-', 'bg-').replace('/10', '/20')} ${op.bg}`}>
+                        <OpIcon className="h-3.5 w-3.5" />
+                        {op.label}
                     </span>
-                )}
 
-                {/* 运营商角标：图片右上角 */}
-                <span
-                    className={`absolute right-2 top-2 z-10 inline-flex items-center gap-1 rounded-lg border px-1.5 py-0.5 text-[10px] font-semibold shadow-sm sm:right-3 sm:top-3 ${op.text} ${op.border} ${op.bg}`}
-                >
-                    <OpIcon className="size-3" />
-                    {op.label}
-                </span>
-            </Link>
+                    {/* 热销/主推角标：左上角 */}
+                    {(featured || index < 3) && (
+                        <span className={`absolute left-3 top-3 z-10 rounded-md px-2 py-0.5 text-xs font-bold text-white ${featured ? "bg-gradient-to-r from-orange-500 to-red-500" : "bg-red-500"}`}>
+                            <Flame className="mr-1 inline-block h-3 w-3 fill-white" />
+                            {featured ? "主推" : "热销"}
+                        </span>
+                    )}
 
-            {/* ===== 右区：套餐信息 ===== */}
-            <div className="flex min-w-0 flex-1 flex-col p-3 lg:p-4">
-                {/* 标题 + 销量 */}
-                <div className="flex items-start justify-between gap-2">
-                    <h3 className="line-clamp-2 text-[13px] font-bold leading-tight text-gray-900 sm:text-sm lg:text-base">
-                        <Link href={detailHref} className="transition-colors hover:text-blue-600">
-                            {title}
+                    {/* 图片 + 标题区 */}
+                    <div className="flex gap-3">
+                        <Link href={detailHref} className="relative h-[90px] w-[90px] shrink-0 overflow-hidden rounded-lg">
+                            {hasImage && (
+                                <img
+                                    src={product.tips}
+                                    alt={product.name}
+                                    className="h-full w-full object-cover"
+                                    loading="lazy"
+                                />
+                            )}
                         </Link>
-                    </h3>
-                    {product.sales > 0 && (
-                        <span className="shrink-0 text-[10px] whitespace-nowrap text-gray-400">
-                            已售 {formatSales(product.sales)}
+                        <div className="min-w-0 flex-1">
+                            <h3 className="line-clamp-2 text-xs font-semibold leading-tight text-gray-900">
+                                <Link href={detailHref} className="hover:text-blue-600">
+                                    {title}
+                                </Link>
+                            </h3>
+                            <p className="mt-1 line-clamp-1 text-[13px] text-gray-600">
+                                {planDesc}
+                            </p>
+                            {/*特色标签 */}
+                            {featureTags.length > 0 && (
+                                <div className="mt-2 flex flex-wrap gap-1.5">
+                                    {featureTags.slice(0, 4).map((tag) => {
+                                        // 根据不同类型分配不同颜色
+                                        const getColorByType = (text: string) => {
+                                            if (text.includes("流量")) return "bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-500/20 dark:text-blue-300 dark:border-blue-500/50";
+                                            if (text.includes("通话")) return "bg-orange-50 text-orange-600 border-orange-200 dark:bg-orange-500/20 dark:text-orange-300 dark:border-orange-500/50";
+                                            if (text.includes("定向")) return "bg-purple-50 text-purple-600 border-purple-200 dark:bg-purple-500/20 dark:text-purple-300 dark:border-purple-500/50";
+                                            if (text.includes("长期")) return "bg-green-50 text-green-600 border-green-200 dark:bg-green-500/20 dark:text-green-300 dark:border-green-500/50";
+                                            if (text.includes("不限") || text.includes("全国")) return "bg-teal-50 text-teal-600 border-teal-200 dark:bg-teal-500/20 dark:text-teal-300 dark:border-teal-500/50";
+                                            if (text.includes("免费") || text.includes("送")) return "bg-rose-50 text-rose-600 border-rose-200 dark:bg-rose-500/20 dark:text-rose-300 dark:border-rose-500/50";
+                                            return "bg-gray-50 text-gray-600 border-gray-200 dark:bg-dark-3 dark:text-dark-5 dark:border-dark-3"; // 默认灰色
+                                        };
+                                        
+                                        return (
+                                            <span
+                                                key={tag.text}
+                                                className={`inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-xs font-medium border ${getColorByType(tag.text)}`}
+                                            >
+                                                {tag.text}
+                                            </span>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* 4 列参数条 */}
+                    <div className="mt-3 grid grid-cols-4 gap-1.5 rounded-lg bg-gray-50 p-2.5">
+                        <div className="flex flex-col items-center">
+                            <span className="text-sm font-bold text-red-500">¥{price}</span>
+                            <span className="mt-0.5 text-[10px] text-gray-400">月租费用</span>
+                        </div>
+                        <div className="flex flex-col items-center">
+                            <span className="text-sm font-bold text-gray-800">{product.commonFlow || 0}G</span>
+                            <span className="mt-0.5 text-[10px] text-gray-400">通用流量</span>
+                        </div>
+                        <div className="flex flex-col items-center">
+                            <span className="text-sm font-bold text-gray-800">{product.fixedFlow || 0}G</span>
+                            <span className="mt-0.5 text-[10px] text-gray-400">定向流量</span>
+                        </div>
+                        <div className="flex flex-col items-center">
+                            <span className="text-sm font-bold text-gray-800">{product.callDuration || 0}分</span>
+                            <span className="mt-0.5 text-[10px] text-gray-400">通话分钟</span>
+                        </div>
+                    </div>
+
+                    {/* 操作栏 */}
+                    <div className="mt-3 flex items-center justify-between gap-2">
+                        {/* 年龄限制 */}
+                        <span className="inline-flex items-center gap-1 text-xs text-gray-500">
+                            <ShieldCheck className="h-3.5 w-3.5" />
+                            {ageLimit || "不限年龄"}
                         </span>
-                    )}
+                        <div className="flex items-center gap-1.5">
+                            {/*查看详情*/}
+                            <Link
+                                href={detailHref}
+                                className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs font-normal text-gray-500 hover:border-blue-300 hover:text-blue-600 dark:border-dark-4 dark:text-dark-5 dark:hover:border-blue-400 dark:hover:text-blue-400"
+                            >
+                                <FileText className="h-3.5 w-3.5" />
+                                查看详情
+                            </Link>
+                            {/*立即办理*/}
+                            <a
+                                href={product._orderUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-normal text-white hover:bg-blue-700 active:scale-95"
+                            >
+                                立即办理
+                                <ArrowRight className="h-3.5 w-3.5" />
+                            </a>
+                        </div>
+                    </div>
+
+                    {/* 底部分割线 */}
+                    <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-2.5 text-[10px] text-gray-400">
+                        <span>{scope || "全国可发"}</span>
+                        {product.sales > 0 && (
+                            <span className="flex items-center gap-1">
+                                <RefreshCw className="h-3 w-3" />
+                                {formatSales(product.sales)}人领取
+                            </span>
+                        )}
+                    </div>
                 </div>
-
-                {/* 套餐描述 */}
-                <p className="mt-1 line-clamp-1 text-[11px] font-medium text-blue-600 sm:text-xs">
-                    {planDesc}
-                </p>
-
-                {/* 4 列参数条 */}
-                <div className="mt-2.5 grid grid-cols-4 rounded-xl bg-gray-50 px-2 py-2.5 sm:py-3">
-                    {specData.map((item) => (
-                        <SpecCell
-                            key={item.label}
-                            value={item.value}
-                            unit={item.unit}
-                            label={item.label}
-                            valueClass={item.valueClass}
-                        />
-                    ))}
-                </div>
-
-                {/* 标签行：办理条件 + 特色标签 合并为连续流 */}
-                <div className="mt-2.5 flex flex-wrap gap-1.5">
-                    {ageLimit && (
-                        <span className="inline-flex items-center gap-1 rounded-md bg-green-50 px-2 py-1 text-[11px] font-medium text-green-600">
-                            <ShieldCheck className="size-3" />
-                            {ageLimit}
+            </div>
+            {/* ===== PC 端布局（≥sm）：左右结构===== */}
+            <div className="hidden sm:block">
+                <div className="flex flex-row">
+                    {/* 左侧图片区 */}
+                    <div className="relative w-5/12 shrink-0 lg:w-2/5">
+                        <Link href={detailHref} className="block bg-white p-3 dark:bg-dark-2">
+                            <div className="relative h-full overflow-hidden rounded-lg">
+                                {hasImage && (
+                                    <img
+                                        src={product.tips}
+                                        alt={product.name}
+                                        className="h-full w-full object-cover"
+                                        loading="lazy"
+                                    />
+                                )}
+                            </div>
+                        </Link>
+                        {/* 热销/主推角标 */}
+                        {(featured || index < 3) && (
+                            <span className={`absolute left-3 top-3 z-10 rounded-md px-2 py-0.5 text-[10px] font-bold text-white ${featured ? "bg-gradient-to-r from-orange-500 to-red-500" : "bg-red-500"}`}>
+                                <Flame className="mr-1 inline-block h-3 w-3 fill-white" />
+                                {featured ? "主推" : "热销"}
+                            </span>
+                        )}
+                        {/* 运营商标签 */}
+                        <span className={`absolute right-3 top-3 z-10 flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-medium ${op.text} ${op.bg}`}>
+                            <OpIcon className="h-3 w-3" />
+                            {op.label}
                         </span>
-                    )}
-                    <span className="inline-flex items-center gap-1 rounded-md bg-orange-50 px-2 py-1 text-[11px] font-medium text-orange-600">
-                        <MapPin className="size-3" />
-                        {scope || "快递配送"}
-                    </span>
-                    {featureTags.map((tag) => (
-                        <span
-                            key={tag.text}
-                            className={`inline-flex items-center rounded-md border px-2 py-1 text-[11px] font-medium ${TAG_VARIANT_STYLES[tag.variant]}`}
-                        >
-                            {tag.text}
-                        </span>
-                    ))}
-                </div>
+                    </div>
 
-                {/* 底部按钮：立即办理 + 查看详情 */}
-                <div className="mt-auto flex items-center gap-2 border-t border-gray-100 pt-2.5">
-                    <a
-                        href={product._orderUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="group/cta inline-flex flex-1 items-center justify-center gap-1 rounded-lg bg-linear-to-r from-blue-600 to-blue-700 px-3 py-2 text-[11px] font-semibold text-white transition-all hover:shadow-md hover:shadow-blue-600/30 sm:text-xs"
-                    >
-                        立即办理
-                        <ArrowRight className="size-3.5 transition-transform duration-300 group-hover/cta:translate-x-0.5" />
-                    </a>
-                    <Link
-                        href={detailHref}
-                        className="inline-flex flex-1 items-center justify-center gap-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-[11px] font-semibold text-gray-700 transition-all hover:border-blue-300 hover:text-blue-600 sm:text-xs"
-                    >
-                        <FileText className="size-3.5" />
-                        查看详情
-                    </Link>
+                    {/* 右侧内容区 */}
+                    <div className="flex flex-1 flex-col p-4 xl:p-5">
+                        {/* 标题 + 销量 */}
+                        <div className="mb-2 flex items-start justify-between gap-2">
+                            <h3 className="text-sm font-semibold text-gray-900 lg:text-base">
+                                <Link href={detailHref} className="hover:text-blue-600">
+                                    {title}
+                                </Link>
+                            </h3>
+                            {product.sales > 0 && (
+                                <span className="shrink-0 text-[10px] whitespace-nowrap text-gray-400 lg:text-xs">
+                                    已售 {formatSales(product.sales)}
+                                </span>
+                            )}
+                        </div>
+
+                        {/* 套餐描述 */}
+                        <p className="mb-3 text-sm text-gray-600">
+                            {planDesc}
+                        </p>
+
+                        {/* 4 列参数条 */}
+                        <div className="mb-3 grid grid-cols-4 gap-2 rounded-xl bg-gray-50 p-2.5 dark:bg-dark-3">
+                            <div className="flex flex-col items-center">
+                                <span className="text-sm font-bold text-red-500 lg:text-base">¥{price}</span>
+                                <span className="mt-0.5 text-[10px] text-gray-500 dark:text-dark-5">月租</span>
+                            </div>
+                            <div className="flex flex-col items-center">
+                                <span className="text-sm font-bold text-gray-800 dark:text-gray-200 lg:text-base">{product.commonFlow || 0}G</span>
+                                <span className="mt-0.5 text-[10px] text-gray-500 dark:text-dark-5">通用流量</span>
+                            </div>
+                            <div className="flex flex-col items-center">
+                                <span className="text-sm font-bold text-gray-800 dark:text-gray-200 lg:text-base">{product.fixedFlow || 0}G</span>
+                                <span className="mt-0.5 text-[10px] text-gray-500 dark:text-dark-5">定向流量</span>
+                            </div>
+                            <div className="flex flex-col items-center">
+                                <span className="text-sm font-bold text-gray-800 dark:text-gray-200 lg:text-base">{product.callDuration || 0}分</span>
+                                <span className="mt-0.5 text-[10px] text-gray-500 dark:text-dark-5">通话分钟</span>
+                            </div>
+                        </div>
+
+                        {/* 条件标签 */}
+                        <div className="mb-2 flex flex-wrap gap-1.5">
+                            {ageLimit && (
+                                <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-600 dark:bg-green-500/20 dark:text-green-300">
+                                    <ShieldCheck className="h-3 w-3" />
+                                    {ageLimit}
+                                </span>
+                            )}
+                            <span className="inline-flex items-center gap-1 rounded-full bg-orange-50 px-2.5 py-0.5 text-xs font-medium text-orange-600 dark:bg-orange-500/20 dark:text-orange-300">
+                                <MapPin className="h-3 w-3" />
+                                {scope || "快递配送"}
+                            </span>
+                        </div>
+
+                        {/* 特色标签 */}
+                        {featureTags.length > 0 && (
+                            <div className="mb-3 flex flex-wrap gap-1.5">
+                                {featureTags.slice(0, 8).map((tag) => (
+                                    <span
+                                        key={tag.text}
+                                        className={`inline-flex items-center gap-1 rounded-full border border-dashed border-gray-200 bg-gray-50 px-2 py-0.5 text-xs font-medium text-gray-600 dark:border-dark-3 dark:bg-dark-3 dark:text-dark-5`}
+                                    >
+                                        {tag.text}
+                                    </span>
+                                ))}
+                            </div>
+                        )}
+
+                        {/* 底部按钮 */}
+                        <div className="mt-auto flex items-center gap-2.5 border-t border-gray-100 pt-2.5 dark:border-dark-3">
+                            {/* 立即办理 */}
+                            <a
+                                href={product._orderUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-sm font-normal text-white transition-colors hover:bg-blue-700 lg:px-5 lg:py-2 lg:text-sm"
+                            >
+                                立即办理
+                                <ArrowRight className="h-4 w-4" />
+                            </a>
+                            {/* 查看详情 */}
+                            <Link
+                                href={detailHref}
+                                className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-normal text-gray-700 transition-colors hover:border-blue-400 hover:text-blue-600 dark:border-dark-4 dark:bg-dark-3 dark:text-dark-5 dark:hover:border-blue-400 dark:hover:text-blue-600 lg:px-4 lg:py-2 lg:text-sm"
+                            >
+                                <FileText className="h-4 w-4" />
+                                查看详情
+                            </Link>
+                        </div>
+                    </div>
                 </div>
             </div>
         </article>
