@@ -483,7 +483,7 @@ function ProductDetail({ product }: { product: GantanhaoProductWithMeta }) {
                             立即办理
                         </a>
                         <a
-                            href="https://h5.rimian666.cn/Search/Index"
+                            href="https://app.gantanhao.com/#/subPages/index/list?from=3%40C%40%40BEtq%40%3FGA%3BGBGs%3BBpGB%3BFoAC%3Bt%40ooBsssstGr3%40C%40%40"
                             target="_blank"
                             rel="noopener noreferrer"
                             className="inline-flex items-center justify-center gap-2 rounded-lg border-2 border-gray-300 bg-white px-6 py-3 text-sm font-bold text-gray-600 transition-all hover:bg-gray-50"

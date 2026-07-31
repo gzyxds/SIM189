@@ -43,6 +43,21 @@ import {
   Search,
 } from "lucide-react";
 
+/* ========== 安全提取工具 ========== */
+
+/**
+ * 从林夕通信 shop_link 字段（富文本 <img>）中安全提取「资费详情图片」地址。
+ * shop_link 由上游返回、属不可信 HTML，故仅放行林夕官方图片域名，杜绝 XSS。
+ */
+function extractLinxiFeeImage(html: string): string | null {
+  if (!html) return null;
+  const m = html.match(/<img[^>]+src=(?:"([^"]+)"|'([^']+)'|([^\s>"']+))/i);
+  const url = m ? (m[1] || m[2] || m[3]) : null;
+  if (!url) return null;
+  if (/^https:\/\/[^/]*\.(777haoka\.cn|189ka\.net)\//i.test(url)) return url;
+  return null;
+}
+
 /* ========== Props ========== */
 
 interface LinxiDetailContentProps {
@@ -187,6 +202,8 @@ function ProductDetail({ product }: { product: LinxiProductWithMeta }) {
   const flow = parseLinxiFlow(product.shop_des || product.shop_name);
   const voice = parseLinxiVoice(product.shop_des || product.shop_name);
   const duration = parseLinxiDuration(product.shop_des || product.shop_name);
+  // 资费详情图片：来自 shop_link 字段（富文本 <img>），已做白名单清洗
+  const feeImage = extractLinxiFeeImage(product.shop_link);
   const tags = parseLinxiTags(product);
 
   /** 返佣类型文本 */
@@ -350,7 +367,7 @@ function ProductDetail({ product }: { product: LinxiProductWithMeta }) {
               立即办理
             </a>
             <a
-              href="https://h5.rimian666.cn/Search/Index"
+              href="https://vip.777haoka.cn/cha?k=SGpiazRLQVZSREk9"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center justify-center gap-2 rounded-lg border-2 border-gray-300 bg-white px-6 py-3 text-sm font-bold text-gray-600 transition-all hover:bg-gray-50"
@@ -379,6 +396,23 @@ function ProductDetail({ product }: { product: LinxiProductWithMeta }) {
       <div className="mt-10 grid items-start gap-8 lg:grid-cols-[5fr_3fr]">
         {/* 左侧：套餐资料介绍 */}
         <div className="flex flex-col gap-4">
+          {/* 资费详情图片：来自 shop_link 字段（富文本 img），完整展示不裁切 */}
+          {feeImage && (
+            <section className="rounded-2xl border border-gray-100 bg-white p-6">
+              <div className="mb-4 flex items-center gap-2">
+                <div className="h-5 w-1 rounded-full bg-blue-600" />
+                <h2 className="text-base font-bold text-gray-800">资费详情</h2>
+              </div>
+              <div className="overflow-hidden rounded-xl border border-gray-100">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={feeImage}
+                  alt={`${product.shop_name} 资费详情`}
+                  className="h-auto w-full"
+                />
+              </div>
+            </section>
+          )}
           {product.shop_rule && (
             <section className="rounded-2xl border border-gray-100 bg-white p-6">
               <div className="mb-4 flex items-center gap-2">
