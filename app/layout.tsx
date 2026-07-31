@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { DM_Sans, JetBrains_Mono } from "next/font/google";
 import ScrollToTopButton from "@/components/home/ScrollToTopButton";
 import { ExternalBrowserGuide } from "@/lib/layout";
+import EmergencyBanner from "@/components/EmergencyBanner";
 import "./globals.css";
 
 /* ========== 字体配置 ========== */
@@ -139,6 +140,7 @@ export default function RootLayout({
       <body
         className={`${dmSans.variable} ${jetbrainsMono.variable} font-[family-name:var(--font-sans)] antialiased`}
       >
+        <EmergencyBanner />
         {children}
         <ScrollToTopButton />
         <ExternalBrowserGuide />
