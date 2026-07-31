@@ -134,6 +134,13 @@ const NAV_ITEMS: NavItem[] = [
         icon: Megaphone,
         iconColor: "text-rose-600 bg-rose-50",
       },
+      {
+        label: "卡易号卡",
+        href: "/kayi",
+        desc: "卡易平台号卡，高额返佣",
+        icon: BadgeCheck,
+        iconColor: "text-indigo-600 bg-indigo-50",
+      },
     ],
   },
   { label: "全站搜索", href: "/search", icon: Search, iconColor: "text-blue-600 bg-blue-50" },

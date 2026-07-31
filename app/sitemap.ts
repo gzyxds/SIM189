@@ -20,6 +20,7 @@ import { fetchGongchuangProducts } from "@/lib/api/gongchuang";
 import { fetchYkyProducts } from "@/lib/api/yky";
 import { fetchKsjProducts } from "@/lib/api/ksj";
 import { fetchGantanhaoProducts } from "@/lib/api/gantanhao";
+import { fetchKayiProducts } from "@/lib/api/kayi";
 import { getAllNews } from "@/lib/data/news";
 
 /* ===== 优先级常量 ===== */
@@ -66,7 +67,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.sim189.cn";
 
   /* ===== 并发拉取全部数据源的 ID ===== */
-  const [haokaIds, lotmlIds, linxiIds, kakatxIds, ykyIds, ksjIds, gantanhaoIds] =
+  const [haokaIds, lotmlIds, linxiIds, kakatxIds, ykyIds, ksjIds, gantanhaoIds, kayiIds] =
     await Promise.all([
       safeGetProductIds("浩卡联盟", fetchHaokaProducts, (p) => String(p.product_id)),
       safeGetProductIds("172号卡", fetchLotMLProducts, (p) => String(p.productID)),
@@ -75,6 +76,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       safeGetProductIds("翼卡云", fetchYkyProducts, (p) => String(p.id)),
       safeGetProductIds("卡世界", fetchKsjProducts, (p) => String(p.goods_id)),
       safeGetProductIds("卡业联盟", fetchGantanhaoProducts, (p) => String(p.codeNumber)),
+      safeGetProductIds("卡易号卡", fetchKayiProducts, (p) => String(p.id)),
     ]);
 
   /** 安全获取新闻 ID 列表 */
@@ -214,6 +216,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...buildDetailEntries(ykyIds, "yky", PRODUCT_DETAIL, "daily"),
     ...buildDetailEntries(ksjIds, "ksj", PRODUCT_DETAIL, "daily"),
     ...buildDetailEntries(gantanhaoIds, "gantanhao", PRODUCT_DETAIL, "daily"),
+    ...buildDetailEntries(kayiIds, "kayi", PRODUCT_DETAIL, "daily"),
   ];
 
   /* ===== 新闻详情页条目（发布后内容稳定，每周检查即可） ===== */
@@ -231,7 +234,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     `商品详情: ${productDetailEntries.length} ` +
     `(浩卡${haokaIds.length}/172${lotmlIds.length}/林夕${linxiIds.length}` +
     `/共创${kakatxIds.length}/翼卡云${ykyIds.length}/卡世界${ksjIds.length}` +
-    `/卡业联盟${gantanhaoIds.length}), ` +
+    `/卡业联盟${gantanhaoIds.length}/卡易${kayiIds.length}), ` +
     `新闻详情: ${newsDetailEntries.length}`,
   );
 
