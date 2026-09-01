@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, type ComponentType, type ReactNode } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { SITE_WIDTH_STYLE, containerClass } from "@/lib/layout";
@@ -43,7 +43,7 @@ interface SubNavItem {
   /** 简短描述 */
   desc?: string;
   /** lucide 图标组件 */
-  icon: React.ElementType;
+  icon: ComponentType<{ className?: string }>;
   /** 图标颜色与背景类 */
   iconColor?: string;
   /** 是否为外部链接 */
@@ -58,20 +58,22 @@ interface NavItem {
   dropdownTitle?: string;
   children?: SubNavItem[];
   /** 移动端图标（普通链接使用） */
-  icon?: React.ElementType;
+  icon?: ComponentType<{ className?: string }>;
   /** 移动端图标颜色与背景类 */
   iconColor?: string;
   /** 移动端下拉菜单标题图标 */
-  dropdownIcon?: React.ElementType;
+  dropdownIcon?: ComponentType<{ className?: string }>;
   /** 移动端下拉菜单标题图标颜色类 */
   dropdownIconColor?: string;
+  /** 移动端菜单默认展开（默认收起） */
+  mobileDefaultOpen?: boolean;
 }
 
 /** PC 端右侧 CTA 按钮配置 */
 interface CtaButton {
   label: string;
   href: string;
-  icon: React.ElementType;
+  icon: ComponentType<{ className?: string }>;
   /** 按钮变体：ghost（描边）| solid（实心） */
   variant: "ghost" | "solid";
 }
@@ -84,6 +86,7 @@ const NAV_ITEMS: NavItem[] = [
     dropdownTitle: "选择号卡平台",
     dropdownIcon: CreditCard,
     dropdownIconColor: "text-blue-500",
+    mobileDefaultOpen: true,
     children: [
       {
         label: "172号卡",
@@ -210,6 +213,40 @@ const CTA_BUTTONS: CtaButton[] = [
   },
 ];
 
+/**
+ * 登入/注册按钮 — PC 端与移动端共用渲染
+ * 基础样式由 variant 决定，尺寸/显隐等差异通过 className 传入（tailwind-merge 自动覆盖）
+ */
+function CtaActionButton({
+  btn,
+  className,
+}: {
+  btn: CtaButton;
+  className?: string;
+}) {
+  const Icon = btn.icon;
+  const variantClass =
+    btn.variant === "ghost"
+      ? "border border-slate-200 bg-white text-slate-700 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+      : "bg-blue-600 text-white hover:bg-blue-700";
+
+  return (
+    <a
+      href={btn.href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={cn(
+        "inline-flex items-center justify-center gap-2 rounded-md px-2.5 py-1.5 text-sm font-medium transition-all",
+        variantClass,
+        className
+      )}
+    >
+      <Icon className="size-4" />
+      {btn.label}
+    </a>
+  );
+}
+
 /* ========== 桌面端下拉菜单 ========== */
 
 /**
@@ -233,6 +270,7 @@ function DropdownMenu({
       {/* 触发按钮 */}
       <button
         type="button"
+        aria-haspopup="menu"
         className="inline-flex items-center gap-1 rounded-lg px-3 py-2 text-base font-medium tracking-wide text-slate-600 transition-all duration-200 group-hover:bg-slate-100 group-hover:text-blue-700"
       >
         {label}
@@ -240,7 +278,7 @@ function DropdownMenu({
       </button>
 
       {/* 下拉面板：悬浮时显示，带淡入/淡出动效 */}
-      <div className="invisible absolute left-1/2 top-full z-50 mt-2 -translate-x-1/2 pt-2 opacity-0 transition-all duration-200 group-hover:visible group-hover:opacity-100">
+      <div className="invisible absolute left-1/2 top-full z-50 mt-2 -translate-x-1/2 pt-2 opacity-0 transition-all duration-200 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100">
         {/* 角标箭头指示器 */}
         <div className="absolute left-1/2 top-0.5 -translate-x-1/2">
           <div className="size-3 rotate-45 border-l border-t border-slate-200/60 bg-white" />
@@ -277,7 +315,7 @@ function DropdownMenu({
                 </div>
 
                 {/* 文字区 */}
-                <div className="flex flex-col justify-center">
+                <div className="flex min-w-0 flex-1 flex-col justify-center">
                   <div className="flex items-center gap-1.5">
                     <span className="text-sm font-medium text-slate-700 transition-colors group-hover/item:text-blue-700">
                       {item.label}
@@ -285,7 +323,7 @@ function DropdownMenu({
                     <ArrowRight className="size-3 shrink-0 -translate-x-1 text-blue-400 opacity-0 transition-all duration-200 group-hover/item:translate-x-0 group-hover/item:opacity-100" />
                   </div>
                   {item.desc && (
-                    <span className="text-xs leading-relaxed text-slate-400">
+                    <span className="truncate text-xs leading-relaxed text-slate-400" title={item.desc}>
                       {item.desc}
                     </span>
                   )}
@@ -311,16 +349,19 @@ function MobileDropdownMenu({
   iconClassName = "text-blue-500",
   children,
   onClose,
+  defaultOpen = false,
 }: {
   label: string;
   /** 标题图标组件 */
-  icon?: React.ElementType;
+  icon?: ComponentType<{ className?: string }>;
   /** 标题图标颜色类 */
   iconClassName?: string;
   children: SubNavItem[];
   onClose: () => void;
+  /** 是否默认展开（默认收起） */
+  defaultOpen?: boolean;
 }) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(defaultOpen);
 
   return (
     <div>
@@ -398,7 +439,7 @@ function MobileNavLink({
 }: {
   label: string;
   href: string;
-  icon?: React.ElementType;
+  icon?: ComponentType<{ className?: string }>;
   iconColor?: string;
   onClose: () => void;
 }) {
@@ -478,8 +519,8 @@ export default function Header() {
    * @param closeMobile - 关闭移动端菜单的回调
    * @returns 导航项 React 节点数组
    */
-  const renderMobileNavItems = (closeMobile: () => void): React.ReactNode[] => {
-    const result: React.ReactNode[] = [];
+  const renderMobileNavItems = (closeMobile: () => void): ReactNode[] => {
+    const result: ReactNode[] = [];
     let plainBatch: NavItem[] = [];
 
     const flushBatch = () => {
@@ -524,6 +565,7 @@ export default function Header() {
             label={item.label}
             icon={item.dropdownIcon}
             iconClassName={item.dropdownIconColor}
+            defaultOpen={item.mobileDefaultOpen}
             // eslint-disable-next-line react/no-children-prop
             children={item.children}
             onClose={closeMobile}
@@ -568,7 +610,7 @@ export default function Header() {
         </Link>
 
         {/* 桌面端水平导航 */}
-        <nav className="hidden items-center gap-1 md:flex">
+        <nav className="hidden items-center gap-1 lg:flex">
           {NAV_ITEMS.map((item) => {
             if (item.children) {
               return (
@@ -595,30 +637,19 @@ export default function Header() {
 
         {/* 桌面端 CTA 按钮组 + 移动端汉堡按钮 */}
         <div className="flex items-center gap-2 sm:gap-3">
-          {/* 桌面端：登入按钮（描边样式） */}
-          <a
-            href={loginBtn.href}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hidden items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-sm font-medium text-slate-700 transition-all hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 md:inline-flex lg:px-3.5 lg:py-2 lg:text-base"
-          >
-            <LogIn className="size-4" />
-            登入
-          </a>
-          {/* 桌面端：注册按钮（实心样式） */}
-          <a
-            href={registerBtn.href}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hidden items-center gap-1.5 rounded-md bg-blue-600 px-2.5 py-1.5 text-sm font-medium text-white transition-all hover:bg-blue-700 hover:-translate-y-0.5 md:inline-flex lg:px-3.5 lg:py-2 lg:text-base"
-          >
-            <UserPlus className="size-4" />
-            注册
-          </a>
+          {/* 桌面端：登入（描边） + 注册（实心） */}
+          <CtaActionButton
+            btn={loginBtn}
+            className="hidden lg:inline-flex lg:px-3.5 lg:py-2 lg:text-base"
+          />
+          <CtaActionButton
+            btn={registerBtn}
+            className="hidden hover:-translate-y-0.5 lg:inline-flex lg:px-3.5 lg:py-2 lg:text-base"
+          />
 
           {/* 移动端汉堡菜单切换按钮 */}
           <button
-            className="inline-flex size-9 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 md:hidden"
+            className="inline-flex size-9 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 lg:hidden"
             onClick={() => setMobileOpen(!mobileOpen)}
             aria-label="切换菜单"
             aria-expanded={mobileOpen}
@@ -631,7 +662,7 @@ export default function Header() {
 
       {/* ── 移动端展开菜单 ── */}
       {mobileOpen && (
-        <div id="mobile-menu-panel" className="max-h-[calc(100dvh-4rem)] overflow-y-auto border-t border-slate-200/60 bg-white md:hidden">
+        <div id="mobile-menu-panel" className="max-h-[calc(100dvh-4rem)] overflow-y-auto border-t border-slate-200/60 bg-white lg:hidden">
           {/* ── 导航链接区：按 PC 端顺序混排，双排网格 ── */}
           <div className="px-4 pt-3">
             {/* 分节标题 */}
@@ -660,24 +691,8 @@ export default function Header() {
 
             {/* 登入 & 注册：双排并列 */}
             <div className="grid grid-cols-2 gap-2">
-              <a
-                href={loginBtn.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-2 py-2 text-sm font-medium text-slate-700 transition-colors hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
-              >
-                <LogIn className="size-4" />
-                登入
-              </a>
-              <a
-                href={registerBtn.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-2 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
-              >
-                <UserPlus className="size-4" />
-                注册
-              </a>
+              <CtaActionButton btn={loginBtn} className="rounded-lg px-2 py-2" />
+              <CtaActionButton btn={registerBtn} className="rounded-lg px-2 py-2" />
             </div>
           </div>
         </div>

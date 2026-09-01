@@ -3,6 +3,8 @@
  *
  * 展示浩卡联盟 API 套餐，默认显示 8 个，点击「加载更多」展开全部。
  * 数据来源：浩卡联盟分销系统 /open/api/product
+ * 样式说明：卡片参考 app/yky/YkyContent.tsx（左图右内容），
+ * 标题区采用首页统一风格（简洁居中），浅灰底衬托白色卡片
  */
 import { SITE_WIDTH_STYLE, containerClass } from "@/lib/layout";
 import { fetchHaokaProducts } from "@/lib/api/haokavip";
@@ -25,30 +27,19 @@ export default async function PlansSection() {
   }
 
   return (
-    <section id="plans" className="relative overflow-hidden">
-      {/* 背景图片 + 多层渐变 + 光晕 */}
-      <div className="pointer-events-none absolute inset-0 -z-10">
-        <div
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-          style={{ backgroundImage: "url('/background/background-7.png')" }}
-        />
-        <div className="absolute inset-0 bg-white/40" />
-        <div className="absolute inset-0 bg-gradient-to-b from-white via-blue-50/30 to-white" />
-        <div className="absolute -top-32 left-1/2 h-64 w-[600px] -translate-x-1/2 rounded-full bg-blue-100/40 blur-3xl" />
-        <div className="absolute bottom-0 right-0 h-96 w-96 rounded-full bg-indigo-100/20 blur-3xl" />
-      </div>
-
+    <section id="plans" className="bg-[#f5f7fa] dark:bg-gray-950">
       <div className={containerClass("py-10 md:py-20")} style={SITE_WIDTH_STYLE}>
-        {/* 标题区 */}
-        <div className="mb-6 text-center md:mb-10">
-          <div className="mb-2 inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 sm:text-sm">
-            <CreditCard className="size-3.5 sm:size-4" />
+        {/* ===== 标题区（简洁居中，与首页其他区块一致） ===== */}
+        <div className="mb-8 text-center md:mb-12">
+          <div className="mb-3 inline-flex items-center gap-2 text-sm font-semibold text-blue-600">
+            <CreditCard className="size-4" />
             套餐选择
           </div>
-          <h2 className="text-xl font-bold tracking-tight sm:text-2xl md:text-4xl">
+          <h2 className="text-2xl font-bold tracking-tight sm:text-3xl md:text-4xl">
             大流量卡套餐，灵活选择
           </h2>
-          <p className="mt-1.5 text-xs text-muted-foreground sm:text-sm">
+          <div className="mx-auto mt-4 h-1 w-16 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600" />
+          <p className="mx-auto mt-4 max-w-xl text-muted-foreground">
             从日常轻度使用到重度流量消耗，总有一款适合您
           </p>
         </div>

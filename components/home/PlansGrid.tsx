@@ -2,7 +2,7 @@
  * 套餐网格组件（客户端交互）
  *
  * 默认显示 8 个商品，每次点击「加载更多」再增加 8 个。
- * 响应式断点：移动端 1 列 → 平板 2 列 → 桌面 4 列（与 Linxi 列表页一致）
+ * 响应式断点：移动端 1 列 → 桌面 2 列（横向卡片，与 YkyContent 列表页一致）
  */
 "use client";
 
@@ -27,8 +27,8 @@ export default function PlansGrid({ products }: PlansGridProps) {
 
   return (
     <>
-      {/* 渐进式响应网格：1→2→4 列 */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {/* 渐进式响应网格：移动端 1 列 → 桌面 2 列（横向卡片，参考 YkyContent） */}
+      <div className="grid items-start gap-3 sm:gap-4 lg:grid-cols-2 lg:gap-5">
         {visible.map((plan) => (
           <ProductCard key={plan.product_id} product={plan} />
         ))}
