@@ -59,6 +59,9 @@ const CAROUSEL_INTERVAL_MS = 4000;
 /** 触摸滑动触发最小距离（像素） */
 const SWIPE_THRESHOLD = 50;
 
+/** Tab 悬停自动切换的防抖延迟（毫秒） */
+const HOVER_SWITCH_DELAY_MS = 300;
+
 /* ==================================================================
  * 类型定义
  * ================================================================== */
@@ -844,6 +847,39 @@ function OperatorTabBar({
     setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 2);
   }, []);
 
+  /** 悬停自动切换的防抖定时器引用 */
+  const hoverTimerRef = useRef<number | null>(null);
+
+  /** 清除尚未触发的悬停切换定时器 */
+  const clearHoverTimer = useCallback(() => {
+    if (hoverTimerRef.current !== null) {
+      window.clearTimeout(hoverTimerRef.current);
+      hoverTimerRef.current = null;
+    }
+  }, []);
+
+  /**
+   * 鼠标悬停到 Tab 上，延迟后自动切换。
+   *
+   * 使用防抖延迟避免鼠标快速划过多个 Tab 时频繁切换；
+   * 悬停到当前已激活的 Tab 时不做任何事。
+   */
+  const handleTabHover = useCallback(
+    (key: string) => {
+      clearHoverTimer();
+      if (key === activeTab) return;
+
+      hoverTimerRef.current = window.setTimeout(() => {
+        hoverTimerRef.current = null;
+        onTabChange(key);
+      }, HOVER_SWITCH_DELAY_MS);
+    },
+    [activeTab, clearHoverTimer, onTabChange]
+  );
+
+  /* 组件卸载时清理残留的悬停定时器 */
+  useEffect(() => clearHoverTimer, [clearHoverTimer]);
+
   /* 初始和窗口变化时检测滚动状态 */
   useEffect(() => {
     updateScrollState();
@@ -862,6 +898,7 @@ function OperatorTabBar({
         ref={scrollRef}
         className="flex gap-4 overflow-x-auto border-b border-gray-100 pb-2 scrollbar-hide dark:border-gray-800 sm:gap-5"
         onScroll={updateScrollState}
+        onMouseLeave={clearHoverTimer}
         role="tablist"
         aria-label="运营商筛选"
       >
@@ -874,7 +911,11 @@ function OperatorTabBar({
               type="button"
               role="tab"
               aria-selected={isActive}
-              onClick={() => onTabChange(tab.key)}
+              onMouseEnter={() => handleTabHover(tab.key)}
+              onClick={() => {
+                clearHoverTimer();
+                onTabChange(tab.key);
+              }}
               className={cn(
                 "flex shrink-0 items-center gap-1.5 border-b-2 pb-2 text-[13px] font-semibold transition-colors sm:text-sm",
                 isActive

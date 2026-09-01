@@ -138,38 +138,34 @@ function FilterRow({
     counts?: Record<string, number>;
 }) {
     return (
-        <div className="py-1.5 sm:flex sm:flex-wrap sm:items-center sm:gap-2 sm:py-2">
-            {/* 维度标题：移动端独立成行，sm 起与选项同排 */}
-            <span className="relative mb-1.5 flex items-center pl-2.5 text-xs font-medium text-gray-600 before:absolute before:left-0 before:top-1/2 before:h-3 before:w-[3px] before:-translate-y-1/2 before:rounded-sm before:bg-blue-600 sm:mr-1 sm:mb-0 sm:pl-3 sm:text-sm sm:before:h-3.5">
+        /* 移动端单排横向滑动（隐藏滚动条），桌面端恢复自动换行 */
+        <div className="scrollbar-hide flex flex-nowrap items-center gap-2 overflow-x-auto py-2 sm:flex-wrap sm:overflow-visible">
+            <span className="relative mr-1 flex shrink-0 items-center pl-3 text-sm font-medium text-gray-600 before:absolute before:left-0 before:top-1/2 before:h-3.5 before:w-[3px] before:-translate-y-1/2 before:rounded-sm before:bg-blue-600">
                 {label}
             </span>
+            {options.map((opt) => {
+                const isActive = activeKey === opt.key;
+                const count = counts?.[opt.key];
+                if (count !== undefined && count === 0 && opt.key !== "all") return null;
 
-            {/* 选项：移动端横向滚动不换行（隐藏滚动条），sm 起自动换行 */}
-            <div className="-mx-3 flex gap-1.5 overflow-x-auto px-3 pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:gap-2 sm:overflow-visible sm:px-0 sm:pb-0 [&::-webkit-scrollbar]:hidden">
-                {options.map((opt) => {
-                    const isActive = activeKey === opt.key;
-                    const count = counts?.[opt.key];
-                    if (count !== undefined && count === 0 && opt.key !== "all") return null;
-
-                    return (
-                        <button
-                            key={opt.key}
-                            onClick={() => onChange(opt.key)}
-                            className={`shrink-0 rounded-full border px-3 py-1 text-[11px] whitespace-nowrap transition-all duration-300 sm:rounded-md sm:px-3.5 sm:py-1.5 sm:text-xs ${isActive
-                                ? "border-blue-600 bg-blue-600 font-medium text-white shadow-sm shadow-blue-600/20"
-                                : "border-transparent bg-gray-100 text-gray-500 hover:bg-blue-50 hover:text-blue-600"
-                                }`}
-                        >
-                            {opt.label}
-                            {count !== undefined && (
-                                <span className={`ml-1 text-[10px] sm:text-[11px] ${isActive ? "text-white/80" : "text-gray-400"}`}>
-                                    ({count})
-                                </span>
-                            )}
-                        </button>
-                    );
-                })}
-            </div>
+                return (
+                    <button
+                        key={opt.key}
+                        onClick={() => onChange(opt.key)}
+                        className={`shrink-0 whitespace-nowrap rounded-md border px-3.5 py-1.5 text-xs transition-all duration-300 ${isActive
+                            ? "border-blue-600 bg-blue-600 font-medium text-white shadow-sm shadow-blue-600/20"
+                            : "border-transparent bg-gray-100 text-gray-500 hover:bg-blue-50 hover:text-blue-600"
+                            }`}
+                    >
+                        {opt.label}
+                        {count !== undefined && (
+                            <span className={`ml-1 text-[11px] ${isActive ? "text-white/80" : "text-gray-400"}`}>
+                                ({count})
+                            </span>
+                        )}
+                    </button>
+                );
+            })}
         </div>
     );
 }

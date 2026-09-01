@@ -206,8 +206,9 @@ function FilterRow({
   counts?: Record<string, number>;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-2 py-2">
-      <span className="relative mr-1 flex items-center pl-3 text-sm font-medium text-gray-600 before:absolute before:left-0 before:top-1/2 before:h-3.5 before:w-[3px] before:-translate-y-1/2 before:rounded-sm before:bg-blue-600">
+    /* 移动端单排横向滑动（隐藏滚动条），桌面端恢复自动换行 */
+    <div className="scrollbar-hide flex flex-nowrap items-center gap-2 overflow-x-auto py-2 sm:flex-wrap sm:overflow-visible">
+      <span className="relative mr-1 flex shrink-0 items-center pl-3 text-sm font-medium text-gray-600 before:absolute before:left-0 before:top-1/2 before:h-3.5 before:w-[3px] before:-translate-y-1/2 before:rounded-sm before:bg-blue-600">
         {label}
       </span>
       {options.map((opt) => {
@@ -219,7 +220,7 @@ function FilterRow({
           <button
             key={opt.key}
             onClick={() => onChange(opt.key)}
-            className={`rounded-md border px-3.5 py-1.5 text-xs transition-all duration-300 ${isActive
+            className={`shrink-0 whitespace-nowrap rounded-md border px-3.5 py-1.5 text-xs transition-all duration-300 ${isActive
               ? "border-blue-600 bg-blue-600 font-medium text-white shadow-sm shadow-blue-600/20"
               : "border-transparent bg-gray-100 text-gray-500 hover:bg-blue-50 hover:text-blue-600"
               }`}
