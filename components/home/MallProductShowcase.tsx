@@ -3,9 +3,11 @@
  *
  * 架构说明（Next.js App Router）：
  * 1. 本文件是 Client Component（文件顶部 `"use client"`）
- * 2. 数据通过 Server Action `getMallPlatformsProductsAction`（定义于 `lib/api/mall-products.ts`）
- *    在服务端执行，并行拉取 浩卡联盟 / 172号卡 / 林夕通信 / 卡业联盟 / 翼卡云 / 卡易号卡 六平台商品
- * 3. 所有 UI 子组件在客户端渲染，可自由使用 Hooks
+ * 2. 首屏商品数据由服务端组件（app/page.tsx）渲染时直接调用
+ *    `getMallPlatformsProducts`（定义于 `lib/api/mall-products-data.ts`）取数，
+ *    随 HTML 一并返回，客户端无需二次请求、也没有骨架屏
+ * 3. 仅当六平台全部失败时，客户端通过 Server Action `getMallPlatformsProductsAction` 手动重试
+ * 4. 所有 UI 子组件在客户端渲染，可自由使用 Hooks
  *
  * 设计目标：
  * - 整块楼层采用“右侧商品转化位”样式：全宽白卡 + 平台 Tab + 商品卡片网格
@@ -67,6 +69,14 @@ interface ProductImageFrameProps {
     wrapperClassName: string;
     fallbackClassName: string;
     imageClassName?: string;
+}
+
+/** 商城首页促销楼层组件参数 */
+interface MallProductShowcaseProps {
+    /** 服务端预取的初始商品数据 */
+    initialProducts: MallProductItem[];
+    /** 服务端预取失败信息（无错误为 null） */
+    initialError: string | null;
 }
 
 /* ==================================================================
@@ -191,41 +201,6 @@ async function fetchMallProductsWithRetry(
     }
 
     throw lastError ?? new Error("获取商品数据失败，请稍后重试");
-}
-
-/* ==================================================================
- * 骨架屏组件
- * ================================================================== */
-
-/**
- * 商品卡片骨架屏。
- *
- * 模拟真实商品卡片的视觉结构（图片区 + 标签 + 标题 + 价格 + 按钮），
- * 保持与正式布局一致的骨架结构，减少加载前后视觉跳动。
- *
- * @returns 骨架屏节点
- */
-function ProductCardSkeleton() {
-    return (
-        <div className="flex flex-col overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900">
-            <div className="aspect-square animate-pulse bg-gray-100 dark:bg-gray-800" />
-            <div className="flex flex-1 flex-col p-2.5 sm:p-3">
-                <div className="mb-2 flex gap-1.5">
-                    <div className="h-4 w-12 animate-pulse rounded-full bg-gray-100 dark:bg-gray-800" />
-                    <div className="h-4 w-10 animate-pulse rounded-full bg-gray-100 dark:bg-gray-800" />
-                </div>
-                <div className="h-4 w-full animate-pulse rounded bg-gray-100 dark:bg-gray-800" />
-                <div className="mt-1.5 h-4 w-3/4 animate-pulse rounded bg-gray-100 dark:bg-gray-800" />
-                <div className="mt-3">
-                    <div className="h-8 w-20 animate-pulse rounded bg-gray-100 dark:bg-gray-800" />
-                    <div className="mt-2 flex gap-2">
-                        <div className="h-7 flex-1 animate-pulse rounded-full bg-gray-100 dark:bg-gray-800" />
-                        <div className="h-7 flex-1 animate-pulse rounded-full bg-gray-100 dark:bg-gray-800" />
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
 }
 
 /**
@@ -542,53 +517,22 @@ function MallSectionHeader() {
 }
 
 /**
- * 商城楼层加载态。
- *
- * 保持与正式布局一致的骨架结构（全宽白卡 + Tab + 10 张商品卡），
- * 减少加载前后视觉跳动。
- *
- * @returns 加载态节点
- */
-function MallShowcaseLoading() {
-    return (
-        <section id="mall" className="bg-[#f8f9fa] dark:bg-gray-950">
-            <div className={containerClass("py-8 md:py-12")} style={SITE_WIDTH_STYLE}>
-                <div className="mb-5 flex flex-col gap-2 sm:mb-7">
-                    <div className="h-6 w-32 animate-pulse rounded-full bg-gray-200 dark:bg-gray-800" />
-                    <div className="h-8 w-48 animate-pulse rounded bg-gray-200 dark:bg-gray-800" />
-                </div>
-
-                <div className="rounded-md border border-gray-100 bg-white p-3.5 shadow-sm dark:border-gray-800 dark:bg-gray-900 sm:p-4 md:p-5">
-                    <div className="mb-4 space-y-2">
-                        <div className="h-6 w-24 animate-pulse rounded bg-gray-200 dark:bg-gray-800" />
-                        <div className="h-4 w-40 animate-pulse rounded bg-gray-100 dark:bg-gray-800" />
-                    </div>
-                    <div className="mb-4 h-8 w-full animate-pulse rounded bg-gray-100 dark:bg-gray-800" />
-                    <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 lg:grid-cols-5">
-                        {Array.from({ length: PAGE_SIZE }).map((_, i) => (
-                            <ProductCardSkeleton key={i} />
-                        ))}
-                    </div>
-                </div>
-            </div>
-        </section>
-    );
-}
-
-/**
  * 商城楼层失败态。
  *
  * @param props - 失败态参数
  * @param props.error - 当前错误信息
  * @param props.onRetry - 用户点击重试时的回调
+ * @param props.isRetrying - 是否正在重试
  * @returns 失败态节点
  */
 function MallShowcaseError({
     error,
     onRetry,
+    isRetrying = false,
 }: {
     error: string;
     onRetry: () => void;
+    isRetrying?: boolean;
 }) {
     return (
         <section id="mall" className="bg-[#f8f9fa] py-10 dark:bg-gray-950 sm:py-12">
@@ -601,10 +545,11 @@ function MallShowcaseError({
                 <button
                     type="button"
                     onClick={onRetry}
-                    className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 active:scale-[0.98] dark:bg-blue-500 dark:hover:bg-blue-400"
+                    disabled={isRetrying}
+                    className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70 dark:bg-blue-500 dark:hover:bg-blue-400"
                 >
-                    <RefreshCw className="size-4" />
-                    重新加载
+                    <RefreshCw className={cn("size-4", isRetrying && "animate-spin")} />
+                    {isRetrying ? "加载中…" : "重新加载"}
                 </button>
             </div>
         </section>
@@ -637,8 +582,9 @@ function EmptyFilteredProducts() {
 /**
  * 商城首页促销楼层主组件。
  *
- * 通过 Server Action 在服务端并行拉取 浩卡联盟 / 172号卡 / 林夕通信 / 卡业联盟 / 翼卡云 / 卡易号卡
- * 六平台商品数据，客户端渲染整宽卡片楼层。
+ * 首屏商品数据由服务端组件（app/page.tsx）取数后以 props 传入，
+ * 组件内不再有 loading 状态与骨架屏；仅在六平台全部失败时展示错误态，
+ * 用户点击「重新加载」通过 Server Action 重试。
  * 平台 Tab 筛选 + 精选商品卡片网格，每个 Tab 默认展示 10 个商品（5 个 × 2 排）。
  *
  * 多端适配：
@@ -647,43 +593,41 @@ function EmptyFilteredProducts() {
  * - 桌面（lg）：5列商品网格（默认 5 个 × 2 排展示）
  *
  * 数据请求：
- * - 带指数退避重试（最多 3 次）
- * - 单次请求 15s 超时控制
- * - 全部平台失败后提供手动重试按钮
+ * - 首屏：服务端组件渲染时直接调用 getMallPlatformsProducts 取数（各平台带 12h 内存缓存）
+ * - 重试：失败态点击「重新加载」时调用 Server Action，带指数退避与超时控制
  */
-export default function MallProductShowcase() {
+export default function MallProductShowcase({
+    initialProducts,
+    initialError,
+}: MallProductShowcaseProps) {
     const [activeTab, setActiveTab] = useState<MallPlatformKey | "all">("all");
-    const [products, setProducts] = useState<MallProductItem[]>([]);
-    const [error, setError] = useState<string | null>(null);
-    const [loading, setLoading] = useState(true);
+    const [products, setProducts] = useState<MallProductItem[]>(initialProducts);
+    const [error, setError] = useState<string | null>(initialError);
+    const [isRetrying, setIsRetrying] = useState(false);
 
     /**
-     * 数据加载函数，支持重试。
+     * 失败重试函数，仅在错误态下由用户点击触发。
      * 使用 useCallback 缓存以保持引用稳定。
      */
     const loadData = useCallback(async () => {
-        setLoading(true);
-        setError(null);
+        setIsRetrying(true);
 
         try {
             const result = await fetchMallProductsWithRetry();
             setProducts(result.products);
 
-            /* 全部平台都失败时才进入失败态 */
+            /* 全部平台都失败时才保持失败态；部分成功则恢复展示 */
             if (result.products.length === 0 && result.errors.length > 0) {
                 setError(result.errors.join("；"));
+            } else {
+                setError(null);
             }
         } catch (e) {
             setError(e instanceof Error ? e.message : "获取商品数据失败，请稍后重试");
         } finally {
-            setLoading(false);
+            setIsRetrying(false);
         }
     }, []);
-
-    /* 挂载时自动加载数据（loadData 引用稳定，无需取消逻辑） */
-    useEffect(() => {
-        loadData();
-    }, [loadData]);
 
     /* 按平台筛选数据源，每个 Tab 固定展示 PAGE_SIZE 个商品 */
     const filteredProducts = useMemo(() => {
@@ -695,14 +639,9 @@ export default function MallProductShowcase() {
         return source.slice(0, PAGE_SIZE);
     }, [products, activeTab]);
 
-    /* ===== 加载中骨架屏状态 ===== */
-    if (loading) {
-        return <MallShowcaseLoading />;
-    }
-
     /* ===== 加载失败状态（含重试按钮） ===== */
     if (error) {
-        return <MallShowcaseError error={error} onRetry={loadData} />;
+        return <MallShowcaseError error={error} onRetry={loadData} isRetrying={isRetrying} />;
     }
 
     /* ===== 正常渲染：整宽“右侧商品转化位”卡片样式 ===== */
