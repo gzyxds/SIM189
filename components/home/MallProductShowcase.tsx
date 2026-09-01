@@ -284,17 +284,17 @@ function PromoProductCard({ product }: { product: MallProductItem }) {
                 {/* 来源平台角标 */}
                 <div
                     className={cn(
-                        "absolute left-3 top-3 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold shadow-sm backdrop-blur-sm",
+                        "absolute left-3 top-3 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold shadow-sm backdrop-blur-sm sm:px-2.5 sm:py-1 sm:text-[11px]",
                         badge.className
                     )}
                 >
-                    <Gift className="size-3" />
+                    <Gift className="hidden size-3 sm:block" />
                     {badge.label}
                 </div>
 
                 {/* 热度角标：右上角 */}
-                <div className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-blue-600 px-2.5 py-1 text-[11px] font-bold text-white shadow-sm">
-                    <Flame className="size-3" />
+                <div className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-blue-600 px-2 py-0.5 text-[10px] font-bold text-white shadow-sm sm:px-2.5 sm:py-1 sm:text-[11px]">
+                    <Flame className="hidden size-3 sm:block" />
                     热销
                 </div>
             </Link>
@@ -335,17 +335,17 @@ function PromoProductCard({ product }: { product: MallProductItem }) {
                                 </span>
                                 <span className="pb-0.5 text-[11px] text-gray-400">/月</span>
                             </div>
-                            <p className="mt-0.5 text-[11px] text-gray-400 dark:text-gray-500">
+                            <p className="mt-0.5 truncate text-[11px] text-gray-400 dark:text-gray-500">
                                 低月租大流量 · 包邮到家
                             </p>
                         </div>
                     </div>
 
-                    {/* 操作按钮：查看详情 + 立即办理 */}
-                    <div className="mt-2 flex gap-2">
+                    {/* 操作按钮：查看详情 + 立即办理（移动端堆叠、≥640px 并排，避免挤压变形） */}
+                    <div className="mt-2 flex flex-col gap-2 sm:flex-row">
                         <Link
                             href={product.detailUrl}
-                            className="inline-flex flex-1 items-center justify-center gap-1 rounded-full border border-gray-200 px-2 py-1.5 text-[11px] font-semibold text-gray-600 transition-colors hover:border-blue-300 hover:bg-blue-50 hover:text-blue-600 dark:border-gray-700 dark:text-gray-300 dark:hover:border-blue-500/40 dark:hover:bg-blue-500/10 dark:hover:text-blue-400"
+                            className="inline-flex w-full flex-1 items-center justify-center gap-1 whitespace-nowrap rounded-full border border-gray-200 px-2 py-1.5 text-[11px] font-semibold text-gray-600 transition-colors hover:border-blue-300 hover:bg-blue-50 hover:text-blue-600 dark:border-gray-700 dark:text-gray-300 dark:hover:border-blue-500/40 dark:hover:bg-blue-500/10 dark:hover:text-blue-400 sm:w-auto"
                         >
                             <FileText className="size-3" />
                             查看详情
@@ -354,7 +354,7 @@ function PromoProductCard({ product }: { product: MallProductItem }) {
                             href={product.orderUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex flex-1 items-center justify-center gap-1 rounded-full bg-blue-600 px-2 py-1.5 text-[11px] font-bold text-white shadow-sm transition-all duration-300 hover:bg-blue-700 hover:shadow-md dark:bg-blue-500 dark:hover:bg-blue-400"
+                            className="inline-flex w-full flex-1 items-center justify-center gap-1 whitespace-nowrap rounded-full bg-blue-600 px-2 py-1.5 text-[11px] font-bold text-white shadow-sm transition-all duration-300 hover:bg-blue-700 hover:shadow-md dark:bg-blue-500 dark:hover:bg-blue-400 sm:w-auto"
                         >
                             立即办理
                             <ArrowRight className="size-3" />
