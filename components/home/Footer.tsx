@@ -175,7 +175,7 @@ export default function Footer() {
               rel="noopener noreferrer"
               className="shrink-0 text-center transition-colors hover:text-foreground sm:text-right"
             >
-              赣ICP备2023002309号
+             
             </a>
           </div>
         </div>
