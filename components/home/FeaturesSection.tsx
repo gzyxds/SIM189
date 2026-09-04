@@ -197,6 +197,7 @@ export default function FeaturesSection() {
                     ? "border-blue-600 bg-blue-600 text-white shadow-sm"
                     : "border-slate-200 bg-white text-slate-600 hover:border-blue-200 hover:text-blue-600"
                 )}
+                onMouseEnter={() => setActiveId(tab.id)}
                 onClick={() => setActiveId(tab.id)}
               >
                 <Icon className="size-4" />
